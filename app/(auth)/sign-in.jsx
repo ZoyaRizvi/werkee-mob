@@ -15,7 +15,7 @@ const SignIn = () => {
 
   const router = useRouter();
 
-  const submit = async () => {
+  const submit = () => {
     if (form.email === "" || form.password === "") {
       Alert.alert("Error", "Please fill in all fields");
       return;
@@ -23,19 +23,10 @@ const SignIn = () => {
 
     setSubmitting(true);
 
-    try {
-      await signIn(form.email, form.password);
-      const result = await getCurrentUser();
-      setUser(result);
-      setIsLogged(true);
+    Alert.alert("Success", "Signed in statically");
+    router.replace("/home");
 
-      Alert.alert("Success", "User signed in successfully");
-      router.replace("/home");
-    } catch (error) {
-      Alert.alert("Error", error.message);
-    } finally {
-      setSubmitting(false);
-    }
+    setSubmitting(false);
   };
 
   return (

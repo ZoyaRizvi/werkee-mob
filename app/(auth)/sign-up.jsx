@@ -24,12 +24,12 @@ const SignUp = () => {
     password: "",
     confirmPassword: "",
   });
-  const [role, setRole] = useState(''); // State to track role
-  const [showForm, setShowForm] = useState(false); // State to control form display
+  const [role, setRole] = useState(''); 
+  const [showForm, setShowForm] = useState(false); 
 
   const router = useRouter();
 
-  const submit = async () => {
+  const submit = () => {
     if (form.email === "" || form.password === "" || form.confirmPassword === "" || role === '') {
       Alert.alert("Error", "Please fill in all fields and select a role");
       return;
@@ -42,16 +42,10 @@ const SignUp = () => {
 
     setSubmitting(true);
 
-    try {
-      // Assuming `signUp` accepts role as a parameter
-      await signUp(form.email, form.password, role);
-      Alert.alert("Success", "User registered successfully");
-      router.replace("/sign-in");
-    } catch (error) {
-      Alert.alert("Error", error.message);
-    } finally {
-      setSubmitting(false);
-    }
+    Alert.alert("Success", "User registered successfully");
+    router.replace("/sign-in");
+
+    setSubmitting(false);
   };
 
   return (
@@ -70,7 +64,7 @@ const SignUp = () => {
                 Welcome to Werky,{'\n'}Let’s kickstart your career journey together!
               </Text>
 
-              <Text style={styles.joinAsText} className="text-[#3dacae]">
+              <Text style={styles.joinAsText}>
                 Join as
               </Text>
 
