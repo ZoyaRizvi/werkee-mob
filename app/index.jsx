@@ -3,7 +3,7 @@ import { Redirect, router } from "expo-router";
 import { Text, View, ScrollView, Image, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { images } from '../constants';
-import CustomButton from '../components/CustomButton'; // Import the default export
+import CustomButton from '../components/CustomButton';
 
 export default function App() {
   return (
@@ -31,7 +31,7 @@ export default function App() {
             <Text className="text-3xl text-gray font-bold text-center">
               <Text className="text-teal-500">Earn</Text> your first income{"\n"}
               with{" "}
-              <Text className="text-secondary-200">Werky</Text>
+              <Text className="text-secondary-200">Werkee</Text>
             </Text>
 
             <Text className="text-sm font-pregular text-gray mt-7 text-center">
