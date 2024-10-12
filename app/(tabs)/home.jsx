@@ -70,7 +70,6 @@ const Home = () => {
 
         {/* Job Listings Section */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Job Listings</Text>
           {jobsMockData.map((job) => (
             <View key={job.id} style={styles.jobItem}>
               <Image source={{ uri: job.imageUrl }} style={styles.jobImage} />
@@ -131,7 +130,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   banner: {
-    backgroundColor: '#38b2ac', // Change banner color as needed
+    backgroundColor: '#FFF2E1', // Change banner color as needed
     padding: 20,
     borderRadius: 8,
     marginBottom: 16,
@@ -140,7 +139,7 @@ const styles = StyleSheet.create({
   bannerText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#ffffff', // White text color
+    color: '#000', // White text color
   },
   card: {
     marginBottom: 16,
