@@ -55,14 +55,11 @@
 //     </SafeAreaView>
 //   );
 // }
-// App.js
-// App.js
-// App.js
-// App.js
+
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import Chat from './screens/chat'; // Adjust path as needed
-import Message from './screens/message'; // Adjust path as needed
+import Chat from './screens/chat'; 
+import Message from './screens/message'; 
 
 const Stack = createStackNavigator();
 
