@@ -5,6 +5,11 @@ import FormField from "../../components/FormField";
 import { images } from "../../constants";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from "expo-router";
+import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { getFirestore, doc, setDoc } from "firebase/firestore"; // Firestore import
+
+const auth = getAuth();
+const db = getFirestore();
 
 const RoundButton = ({ title, isSelected, onPress }) => (
   <TouchableOpacity 
@@ -23,14 +28,15 @@ const SignUp = () => {
     email: "",
     password: "",
     confirmPassword: "",
+    name: "",
   });
   const [role, setRole] = useState(''); 
   const [showForm, setShowForm] = useState(false); 
-
+  const [errorMessage, setErrorMessage] = useState(''); // Error handling
   const router = useRouter();
 
-  const submit = () => {
-    if (form.email === "" || form.password === "" || form.confirmPassword === "" || role === '') {
+  const submit = async () => {
+    if (form.email === "" || form.password === "" || form.confirmPassword === "" || form.name === "" || role === '') {
       Alert.alert("Error", "Please fill in all fields and select a role");
       return;
     }
@@ -42,10 +48,34 @@ const SignUp = () => {
 
     setSubmitting(true);
 
-    Alert.alert("Success", "User registered successfully");
-    router.replace("/sign-in");
+    try {
+      // Create user with email and password in Firebase
+      const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
+      const user = userCredential.user;
 
-    setSubmitting(false);
+      // Update profile with display name
+      await updateProfile(user, { displayName: form.name });
+
+      // Store user data in Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        email: user.email,
+        displayName: form.name,
+        role: role,
+        createdAt: new Date(),
+      });
+
+      // Registration successful
+      Alert.alert("Success", "User registered successfully");
+      router.replace("/sign-in");
+
+    } catch (error) {
+      // Catch and show any Firebase errors
+      setErrorMessage(error.message);
+      Alert.alert("Error", error.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -84,6 +114,14 @@ const SignUp = () => {
           ) : (
             <>
               <FormField
+                title="Full Name"
+                value={form.name}
+                handleChangeText={(e) => setForm({ ...form, name: e })}
+                otherStyles="mt-3"
+                placeholder="Enter your full name"
+              />
+
+              <FormField
                 title="Email"
                 value={form.email}
                 handleChangeText={(e) => setForm({ ...form, email: e })}
@@ -109,6 +147,12 @@ const SignUp = () => {
                 placeholder="Confirm your password"
                 secureTextEntry
               />
+
+              {errorMessage ? (
+                <Text style={{ color: 'red', textAlign: 'center', marginVertical: 10 }}>
+                  {errorMessage}
+                </Text>
+              ) : null}
 
               <CustomButton
                 title="Sign Up"
