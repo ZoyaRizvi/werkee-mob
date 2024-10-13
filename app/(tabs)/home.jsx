@@ -7,8 +7,10 @@ import {
   SafeAreaView,
   TextInput,
   Image,
-  ActivityIndicator
+  ActivityIndicator,
+  TouchableOpacity
 } from 'react-native';
+import { Avatar, Button, Card, Title, Paragraph, IconButton, Chip } from 'react-native-paper';
 import { collectionGroup, getDocs } from "firebase/firestore";
 import { db } from "../../firebase/firebase";
 import CustomButton from '../../components/CustomButton';
@@ -86,6 +88,20 @@ export function Home() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
+                {/* Header Section */}
+                <View style={styles.header}>
+          <TouchableOpacity style={styles.menuIcon}>
+            <IconButton icon="menu" size={24} onPress={() => {}} />
+          </TouchableOpacity>
+          <View style={styles.profileIconContainer}>
+            <Avatar.Image size={30} source={{ uri: 'https://example.com/avatar.jpg' }} />
+            <Text style={styles.profileName}>Dalen Haywood</Text>
+          </View>
+          <View style={styles.headerIcons}>
+            {/* <IconButton icon="bell-outline" size={24} onPress={() => {}} /> */}
+            <IconButton icon="cog-outline" size={24} onPress={() => {}} />
+          </View>
+        </View>
         <View style={styles.banner}>
           <Text style={styles.bannerText}>
             Find your <Text style={{ color: '#51834f' }}>new job</Text> today
@@ -142,14 +158,45 @@ const CardCustom = ({ data }) => {
 
 const styles = StyleSheet.create({
   container: {
+    marginTop:20,
     flex: 1,
     padding: 16,
     backgroundColor: '#ffffff',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    padding: 10,
+    backgroundColor: '#fff',
+    elevation: 4,
+    zIndex: 1,
+  },
+  menuIcon: {
+    flex: 0.2,
+  },
+  profileIconContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 0.6,
+    justifyContent: 'center',
+  },
+  profileName: {
+    marginLeft: 10,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    flex: 0.2,
+    justifyContent: 'flex-end',
   },
   banner: {
     backgroundColor: '#FFF2E1',
     padding: 20,
     borderRadius: 8,
+    marginTop:20,
     marginBottom: 16,
     alignItems: 'center',
   },
