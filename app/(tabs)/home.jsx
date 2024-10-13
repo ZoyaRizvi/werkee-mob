@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,121 +6,137 @@ import {
   ScrollView,
   SafeAreaView,
   TextInput,
-  TouchableOpacity,
   Image,
+  ActivityIndicator
 } from 'react-native';
+import { collectionGroup, getDocs } from "firebase/firestore";
+import { db } from "../../firebase/firebase";
 import CustomButton from '../../components/CustomButton';
 
-const jobsMockData = [
-  {
-    id: 1,
-    title: 'Software Engineer',
-    company: 'Amazon',
-    requirements: 'Selenium',
-    location: 'Karachi',
-    contractType: 'Contract',
-    postingDate: '8/3/2024',
-    imageUrl: 'https://via.placeholder.com/60',
-    description: 'This project involved creating a comprehensive branding and visual identity package for Amazon.',
-  },
-  {
-    id: 2,
-    title: 'Product Manager',
-    company: 'Amazon',
-    requirements: 'Selenium',
-    location: 'Karachi',
-    contractType: 'Contract',
-    postingDate: '8/3/2024',
-    imageUrl: 'https://via.placeholder.com/60',
-    description: 'The goal was to develop a modern, cohesive, and visually striking brand identity for Amazon.',
-  },
-  {
-    id: 3,
-    title: 'Data Scientist',
-    company: 'Amazon',
-    requirements: 'Selenium',
-    location: 'Karachi',
-    contractType: 'Contract',
-    postingDate: '8/3/2024',
-    imageUrl: 'https://via.placeholder.com/60',
-    description: 'Comprehensive branding and visual identity project for Amazon.',
-  },
-  {
-    id: 4,
-    title: 'Data Analyst',
-    company: 'Amazon',
-    requirements: 'Selenium',
-    location: 'Karachi',
-    contractType: 'Contract',
-    postingDate: '8/3/2024',
-    imageUrl: 'https://via.placeholder.com/60',
-    description: 'Visual identity package for Amazon, focusing on modern and cohesive branding.',
-  },
-];
+export function Home() {
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [jobs, setJobs] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [query, setQuery] = useState("");
+  const itemsPerPage = 6;
 
-const Home = () => {
-  const [query, setQuery] = useState('');
+  const fetchPost = async () => {
+    try {
+      const querySnapshot = await getDocs(collectionGroup(db, "jobs"));
+      const newData = querySnapshot.docs.map((doc) => ({
+        ...doc.data(),
+        id: doc.id,
+      }));
+      setJobs(newData);
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error fetching jobs: ", error);
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    setIsLoading(true);
+    fetchPost();
+  }, []);
 
   const handleInputChange = (text) => {
     setQuery(text);
   };
 
-  const handleSearch = () => {
-    alert(`Searching for projects with: ${query}`);
+  const calculatePageRange = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return { startIndex, endIndex };
   };
+
+  const filteredData = (jobs, selectedCategory, selectedDate, query) => {
+    let filteredJobs = jobs;
+
+    if (query) {
+      filteredJobs = filteredJobs.filter((job) =>
+        (job.title || "").toLowerCase().includes(query.toLowerCase())
+      );
+    }
+
+    if (selectedCategory) {
+      filteredJobs = filteredJobs.filter((job) =>
+        job.jobLocation && job.jobLocation.toLowerCase().includes(selectedCategory.toLowerCase())
+      );
+    }
+
+    if (selectedDate) {
+      const selectedDateObj = new Date(selectedDate);
+      filteredJobs = filteredJobs.filter((job) => {
+        const jobPostingDate = new Date(job.postedDate);
+        return jobPostingDate >= selectedDateObj;
+      });
+    }
+
+    const { startIndex, endIndex } = calculatePageRange();
+    filteredJobs = filteredJobs.slice(startIndex, endIndex);
+
+    return filteredJobs.map((data, i) => <CardCustom key={i} data={data} />);
+  };
+
+  const result = filteredData(jobs, selectedCategory, selectedDate, query);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
-        {/* Banner Section */}
         <View style={styles.banner}>
           <Text style={styles.bannerText}>
-            Find your <Text style={{ color: '#51834f' }}>new project</Text> today
+            Find your <Text style={{ color: '#51834f' }}>new job</Text> today
           </Text>
           <Text style={styles.bannerSubText}>
             Endless opportunities are just around the corner—dive in and grab yours.
           </Text>
 
-          {/* Search Section */}
           <View style={styles.searchContainer}>
             <TextInput
               style={styles.searchInput}
-              placeholder="What projects are you looking for?"
+              placeholder="What jobs are you looking for?"
               placeholderTextColor="#999"
               value={query}
               onChangeText={handleInputChange}
             />
-            <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-              <Text style={styles.searchButtonText}>Search</Text>
-            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Job Listings Section */}
-        <View style={styles.card}>
-          {jobsMockData.map((job) => (
-            <View key={job.id} style={styles.jobItem}>
-              <Image source={{ uri: job.imageUrl }} style={styles.jobImage} />
-              <View style={styles.jobDetailsContainer}>
-                <Text style={styles.jobTitle}>{job.title}</Text>
-                <Text style={styles.jobCompany}>{job.company}</Text>
-                <Text style={styles.jobExtraDetails}>Requirements: {job.requirements}</Text>
-                <Text style={styles.jobExtraDetails}>Location: {job.location}</Text>
-                <Text style={styles.jobExtraDetails}>Contract Type: {job.contractType}</Text>
-                <Text style={styles.jobExtraDetails}>Posted on: {job.postingDate}</Text>
-                <Text style={styles.jobDescription}>{job.description}</Text>
-                {/* Apply Button */}
-                <CustomButton
-                  title="Apply"
-                  handlePress={() => alert(`Applying for ${job.title}`)}
-                  containerStyles={styles.applyButtonContainer}
-                />
-              </View>
-            </View>
-          ))}
-        </View>
+        {isLoading ? (
+          <ActivityIndicator size="large" color="#51834f" />
+        ) : (
+          <View style={styles.card}>
+            {result}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
+  );
+};
+
+const CardCustom = ({ data }) => {
+  return (
+    <View style={styles.jobItem}>
+      <Image source={{ uri: data.imageUrl }} style={styles.jobImage} />
+      <View style={styles.jobDetailsContainer}>
+        <Text style={styles.jobTitle}>{data.title}</Text>
+        <Text style={styles.jobCompany}>{data.company}</Text>
+        <Text style={styles.jobExtraDetails}>Requirements: {data.requirements}</Text>
+        <Text style={styles.jobExtraDetails}>Location: {data.location}</Text>
+        <Text style={styles.jobExtraDetails}>Contract Type: {data.contractType}</Text>
+        <Text style={styles.jobExtraDetails}>Posted on: {data.postedDate}</Text>
+        <Text style={styles.jobDescription}>{data.description}</Text>
+        {/* Apply Button */}
+        <CustomButton
+          title="Apply"
+          handlePress={() => alert(`Applying for ${data.title}`)}
+          containerStyles={styles.applyButtonContainer}
+        />
+      </View>
+    </View>
   );
 };
 
@@ -160,16 +176,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 8,
     marginRight: 8,
-  },
-  searchButton: {
-    backgroundColor: '#009B81',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  searchButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
   },
   card: {
     marginBottom: 16,
@@ -216,9 +222,9 @@ const styles = StyleSheet.create({
   },
   applyButtonContainer: {
     marginTop: 10,
-    paddingVertical: 6, // Smaller padding for a smaller button
+    paddingVertical: 6,
     paddingHorizontal: 12,
-    alignSelf: 'flex-end', // Right-align the button
+    alignSelf: 'flex-end',
     backgroundColor: '#009B81',
     borderRadius: 8,
   },
