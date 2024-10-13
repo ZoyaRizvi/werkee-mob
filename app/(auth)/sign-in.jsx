@@ -5,8 +5,8 @@ import FormField from "../../components/FormField";
 import { images } from "../../constants";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from "expo-router";
-import { signInWithEmailAndPassword } from "firebase/auth";  // Firebase auth import
-import { auth } from "../../firebase/firebase";  // Firebase configuration import
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../../firebase/firebase";
 
 const SignIn = () => {
   const [isSubmitting, setSubmitting] = useState(false);
@@ -24,7 +24,7 @@ const SignIn = () => {
     }
 
     setSubmitting(true);
-    setErrorMessage(""); // Reset error message
+    setErrorMessage("");
 
     try {
       await signInWithEmailAndPassword(auth, form.email, form.password);
