@@ -2,39 +2,64 @@ import React, { useState, useEffect } from 'react';
 import firestore from '@react-native-firebase/firestore';
 import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
 
+// Gemini API function (dummy for now, replace with actual API call)
+const generateQuestionsFromGemini = async (skill, level) => {
+  // Replace this with a real call to Gemini API to generate questions
+  return [
+    { id: '1', question: `What is ${skill}?`, correctAnswer: 'Explanation of the skill' },
+    { id: '2', question: `Explain one example of ${skill}?`, correctAnswer: 'An example explanation' }
+  ];
+};
+
 const SkillAssessmentScreen = () => {
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [selectedSkill, setSelectedSkill] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [userAnswers, setUserAnswers] = useState({});
+  const [score, setScore] = useState(null);
 
-  // Fetch questions when both level and skill are selected
-  
+  // Fetch questions from Firestore or Gemini API
   useEffect(() => {
-    const getQuestions = async () => {
-      const fetchedQuestions = await fetchQuestions(selectedSkill, selectedLevel);
-      setQuestions(fetchedQuestions);
+    const fetchOrGenerateQuestions = async () => {
+      setLoading(true);
+      try {
+        const questionsSnapshot = await firestore()
+          .collection('assessments')
+          .doc(`${selectedSkill}_${selectedLevel}`)
+          .collection('questions')
+          .get();
+        
+        if (questionsSnapshot.empty) {
+          // If no questions exist in Firestore, generate using Gemini API
+          const generatedQuestions = await generateQuestionsFromGemini(selectedSkill, selectedLevel);
+          setQuestions(generatedQuestions);
+
+          // Store generated questions in Firebase
+          generatedQuestions.forEach(async (question) => {
+            await firestore()
+              .collection('assessments')
+              .doc(`${selectedSkill}_${selectedLevel}`)
+              .collection('questions')
+              .doc(question.id)
+              .set(question);
+          });
+        } else {
+          // Fetch existing questions from Firestore
+          const fetchedQuestions = questionsSnapshot.docs.map(doc => doc.data());
+          setQuestions(fetchedQuestions);
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
     };
-  
+
     if (selectedSkill && selectedLevel) {
-      getQuestions();
+      fetchOrGenerateQuestions();
     }
   }, [selectedSkill, selectedLevel]);
-  
-
-  const fetchQuestions = async () => {
-    setLoading(true);
-    try {
-      // Example API call to fetch questions based on level and skill
-      const response = await fetch(`https://werky-backend.onrender.com/api/assessment/${selectedLevel}/skill/${selectedSkill}`);
-      const data = await response.json();
-      setQuestions(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Handle level selection
   const handleLevelSelect = (level) => {
@@ -44,6 +69,22 @@ const SkillAssessmentScreen = () => {
   // Handle skill selection
   const handleSkillSelect = (skill) => {
     setSelectedSkill(skill);
+  };
+
+  // Handle answer selection for a question
+  const handleAnswerSelect = (questionId, answer) => {
+    setUserAnswers((prevAnswers) => ({ ...prevAnswers, [questionId]: answer }));
+  };
+
+  // Function to calculate user's score
+  const calculateScore = () => {
+    let correctCount = 0;
+    questions.forEach((question) => {
+      if (userAnswers[question.id] === question.correctAnswer) {
+        correctCount += 1;
+      }
+    });
+    setScore(correctCount);
   };
 
   return (
@@ -96,10 +137,28 @@ const SkillAssessmentScreen = () => {
               renderItem={({ item }) => (
                 <View style={styles.questionItem}>
                   <Text style={styles.questionText}>{item.question}</Text>
+                  <TouchableOpacity
+                    style={styles.button}
+                    onPress={() => handleAnswerSelect(item.id, 'userAnswer')}
+                  >
+                    <Text style={styles.buttonText}>Answer</Text>
+                  </TouchableOpacity>
                 </View>
               )}
             />
           )}
+
+          {/* Calculate and show score */}
+          <TouchableOpacity onPress={calculateScore} style={styles.backButton}>
+            <Text style={styles.backButtonText}>Submit and Calculate Score</Text>
+          </TouchableOpacity>
+          
+          {score !== null && (
+            <View style={styles.scoreContainer}>
+              <Text style={styles.scoreText}>Your Score: {score} / {questions.length}</Text>
+            </View>
+          )}
+
           <TouchableOpacity onPress={() => setSelectedSkill(null)} style={styles.backButton}>
             <Text style={styles.backButtonText}>Back to Skill Selection</Text>
           </TouchableOpacity>
@@ -126,7 +185,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     padding: 15,
     marginVertical: 10,
-    borderColor:'black',
+    borderColor: 'black',
     borderRadius: 10,
   },
   buttonText: {
@@ -156,9 +215,18 @@ const styles = StyleSheet.create({
   questionText: {
     fontSize: 18,
   },
+  scoreContainer: {
+    marginTop: 20,
+  },
+  scoreText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
 });
 
 export default SkillAssessmentScreen;
+
 
 
 
