@@ -5,6 +5,8 @@ import FormField from "../../components/FormField";
 import { images } from "../../constants";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from "expo-router";
+import { signInWithEmailAndPassword } from "firebase/auth";  // Firebase auth import
+import { auth } from "../../firebase/firebase";  // Firebase configuration import
 
 const SignIn = () => {
   const [isSubmitting, setSubmitting] = useState(false);
@@ -12,21 +14,28 @@ const SignIn = () => {
     email: "",
     password: "",
   });
-
+  const [errorMessage, setErrorMessage] = useState("");
   const router = useRouter();
 
-  const submit = () => {
+  const submit = async () => {
     if (form.email === "" || form.password === "") {
       Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
     setSubmitting(true);
+    setErrorMessage(""); // Reset error message
 
-    Alert.alert("Success", "Signed in statically");
-    router.replace("/home");
-
-    setSubmitting(false);
+    try {
+      await signInWithEmailAndPassword(auth, form.email, form.password);
+      Alert.alert("Success", "Signed in successfully");
+      router.replace("/home");
+    } catch (error) {
+      setErrorMessage(`Auth Error: ${error.code}`);
+      Alert.alert("Error", `Authentication failed: ${error.code}`);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -55,6 +64,12 @@ const SignIn = () => {
             otherStyles="mt-7"
             placeholder="Enter your password"
           />
+
+          {errorMessage ? (
+            <Text style={{ color: 'red', textAlign: 'center', marginBottom: 10 }}>
+              {errorMessage}
+            </Text>
+          ) : null}
 
           <CustomButton
             title="Sign In"
