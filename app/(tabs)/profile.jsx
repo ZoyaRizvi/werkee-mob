@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     resizeMode: 'cover', // Make sure the image covers the area
   },
   profileCard: {
-    marginTop: 200, // Adjust to avoid overlap with the background
+    marginTop: 100, 
     width: '90%',
     borderRadius: 15,
     padding: 20,

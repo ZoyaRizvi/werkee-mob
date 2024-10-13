@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { images } from '../constants';
 import CustomButton from '../components/CustomButton';
 
+
 export default function App() {
   return (
     <SafeAreaView className="bg-primary flex-1">
@@ -15,6 +16,7 @@ export default function App() {
           alignItems: "center",
         }}
       >
+      
         <View className="w-full flex justify-center items-center px-4">
           <Image
             source={images.logo}
@@ -48,5 +50,6 @@ export default function App() {
 
       <StatusBar backgroundColor="#161622" style="light" />
     </SafeAreaView>
+
   );
 }
