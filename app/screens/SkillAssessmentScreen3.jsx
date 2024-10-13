@@ -1,151 +1,164 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet, ScrollView } from 'react-native';
-import { RadioButton } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import firestore from '@react-native-firebase/firestore';
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
 
-const SkillAssessmentScreen3 = () => {
-  const [checked, setChecked] = React.useState({});
+const SkillAssessmentScreen = () => {
+  const [selectedLevel, setSelectedLevel] = useState(null);
+  const [selectedSkill, setSelectedSkill] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // Dummy JSON data for questions
-  const questions = [
-    {
-      id: 1,
-      question: "Which of the following is an essential element of effective content writing?",
-      options: ["Clarity", "Conciseness", "Accuracy", "All of the above"]
-    },
-    {
-      id: 2,
-      question: "What is the purpose of keyword research in content writing?",
-      options: [
-        "To identify relevant terms to include in the content",
-        "To improve the content’s visibility in search results",
-        "To attract more readers",
-        "To enhance the content’s overall quality"
-      ]
+  // Fetch questions when both level and skill are selected
+  
+  useEffect(() => {
+    const getQuestions = async () => {
+      const fetchedQuestions = await fetchQuestions(selectedSkill, selectedLevel);
+      setQuestions(fetchedQuestions);
+    };
+  
+    if (selectedSkill && selectedLevel) {
+      getQuestions();
     }
-  ];
+  }, [selectedSkill, selectedLevel]);
+  
 
-  const renderQuestion = (questionItem) => (
-    <View key={questionItem.id} style={styles.questionContainer}>
-      <Text style={styles.questionText}>{questionItem.question}</Text>
-      <RadioButton.Group
-        onValueChange={value =>
-          setChecked(prevState => ({ ...prevState, [questionItem.id]: value }))
-        }
-        value={checked[questionItem.id]}
-      >
-        {questionItem.options.map((option, index) => (
-          <View key={index} style={styles.radioButtonContainer}>
-            <RadioButton value={option} />
-            <Text>{option}</Text>
-          </View>
-        ))}
-      </RadioButton.Group>
-    </View>
-  );
+  const fetchQuestions = async () => {
+    setLoading(true);
+    try {
+      // Example API call to fetch questions based on level and skill
+      const response = await fetch(`https://werky-backend.onrender.com/api/assessment/${selectedLevel}/skill/${selectedSkill}`);
+      const data = await response.json();
+      setQuestions(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle level selection
+  const handleLevelSelect = (level) => {
+    setSelectedLevel(level);
+  };
+
+  // Handle skill selection
+  const handleSkillSelect = (skill) => {
+    setSelectedSkill(skill);
+  };
 
   return (
     <View style={styles.container}>
-      {/* Header Section */}
-      <View style={styles.header}>
-        <Image
-          source={{ uri: 'https://example.com/profile-picture.jpg' }} // Replace with actual image URL
-          style={styles.profileImage}
-        />
-        <View style={styles.breadcrumbContainer}>
-          <Text style={styles.breadcrumbText}>Dashboard / Skillassessment</Text>
-          <Text style={styles.pageTitle}>Skillassessment</Text>
+      {/* Render level selection */}
+      {!selectedLevel && (
+        <View style={styles.levelSelection}>
+          <Text style={styles.title}>Select Your Level</Text>
+          {['ENTRY', 'BASIC', 'INTERMEDIATE', 'ADVANCED'].map((level) => (
+            <TouchableOpacity
+              key={level}
+              style={styles.button}
+              onPress={() => handleLevelSelect(level)}
+            >
+              <Text style={styles.buttonText}>{level}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      </View>
+      )}
 
-      {/* Main Content */}
-      <ScrollView contentContainerStyle={styles.contentContainer}>
-        {/* Main Title */}
-        <Text style={styles.mainTitle}>Skill Assessment for Content Writing</Text>
-
-        {/* Questions Section */}
-        <View style={styles.questionSection}>
-          <Text style={styles.questionTitle}>Questions:</Text>
-
-          {/* Render Questions Dynamically */}
-          {questions.map(renderQuestion)}
+      {/* Render skill selection after level is chosen */}
+      {selectedLevel && !selectedSkill && (
+        <View style={styles.skillSelection}>
+          <Text style={styles.title}>Select a Skill (Level: {selectedLevel})</Text>
+          {['PROJECT MANAGEMENT', 'DEVOPS', 'CONTENT WRITING', 'VIDEO EDITING', 'MARKETING', 'TECHNICAL WRITING', 'SQA', 'GRAPHIC DESIGNING'].map((skill) => (
+            <TouchableOpacity
+              key={skill}
+              style={styles.button}
+              onPress={() => handleSkillSelect(skill)}
+            >
+              <Text style={styles.buttonText}>{skill}</Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity onPress={() => setSelectedLevel(null)} style={styles.backButton}>
+            <Text style={styles.backButtonText}>Back to Level Selection</Text>
+          </TouchableOpacity>
         </View>
-      </ScrollView>
+      )}
+
+      {/* Render questions after both level and skill are selected */}
+      {selectedLevel && selectedSkill && (
+        <View style={styles.questionContainer}>
+          <Text style={styles.title}>Questions for {selectedSkill} ({selectedLevel})</Text>
+          {loading ? (
+            <ActivityIndicator size="large" color="#0000ff" />
+          ) : (
+            <FlatList
+              data={questions}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => (
+                <View style={styles.questionItem}>
+                  <Text style={styles.questionText}>{item.question}</Text>
+                </View>
+              )}
+            />
+          )}
+          <TouchableOpacity onPress={() => setSelectedSkill(null)} style={styles.backButton}>
+            <Text style={styles.backButtonText}>Back to Skill Selection</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginTop:50,
     flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#DDD',
-  },
-  profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
-  },
-  breadcrumbContainer: {
-    flex: 1,
-  },
-  breadcrumbText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  pageTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  contentContainer: {
     padding: 20,
+    justifyContent: 'center',
+    backgroundColor: '#E5E5E5',
   },
-  mainTitle: {
-    fontSize: 22,
+  title: {
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#2E8B57',
     marginBottom: 20,
     textAlign: 'center',
   },
-  questionSection: {
-    backgroundColor: '#FFFFFF',
+  button: {
+    backgroundColor: 'white',
+    padding: 15,
+    marginVertical: 10,
+    borderColor:'black',
     borderRadius: 10,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
   },
-  questionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
+  buttonText: {
+    color: 'black',
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  backButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: 'teal',
+    borderRadius: 5,
+  },
+  backButtonText: {
+    color: 'white',
+    textAlign: 'center',
   },
   questionContainer: {
-    marginBottom: 20,
+    flex: 1,
+  },
+  questionItem: {
+    backgroundColor: '#f5f5f5',
+    padding: 15,
+    marginBottom: 10,
+    borderRadius: 10,
   },
   questionText: {
-    fontSize: 15,
-    marginBottom: 10,
-  },
-  radioButtonContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
+    fontSize: 18,
   },
 });
 
-export default SkillAssessmentScreen3;
+export default SkillAssessmentScreen;
+
 
 
