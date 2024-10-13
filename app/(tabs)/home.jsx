@@ -6,6 +6,7 @@ import {
   ScrollView,
   SafeAreaView,
   Image,
+  TextInput,
   TouchableOpacity,
 } from 'react-native';
 import { ArrowUpIcon } from 'react-native-heroicons/outline';

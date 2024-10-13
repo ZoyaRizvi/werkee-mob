@@ -88,14 +88,6 @@ const Profile = () => {
             </View>
           </Card.Content>
 
-          <Card.Actions>
-            <IconButton 
-              icon="cog" 
-              size={20} 
-              onPress={() => {}} 
-              style={styles.settingsIcon} 
-            />
-          </Card.Actions>
         </Card>
 
         {/* Work Section */}
@@ -184,7 +176,12 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     zIndex: -1, // Ensure it is behind other components
-    resizeMode: 'cover', // Make sure the image covers the area
+    resizeMode: 'cover',
+    position: 'absolute', // Make the image cover the whole screen
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject, // Make the overlay cover the entire screen
+    backgroundColor: 'rgba(0, 0, 0, 0.9)', // Semi-transparent black (adjust opacity to make it darker)
   },
   profileCard: {
     marginTop: 100, 

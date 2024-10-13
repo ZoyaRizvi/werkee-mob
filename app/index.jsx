@@ -6,6 +6,7 @@ import { images } from '../constants';
 import CustomButton from '../components/CustomButton';
 
 
+
 export default function App() {
   return (
     <SafeAreaView className="bg-primary flex-1">
@@ -50,6 +51,7 @@ export default function App() {
 
       <StatusBar backgroundColor="#161622" style="light" />
     </SafeAreaView>
+
 
   );
 }
