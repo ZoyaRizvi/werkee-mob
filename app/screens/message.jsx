@@ -1,5 +1,3 @@
-// Message.jsx
-// Message.jsx
 import React, { useState } from 'react';
 import { 
   View, 
@@ -27,8 +25,7 @@ const Message = ({ route }) => {
 
   const renderMessage = ({ item }) => (
     <View 
-      style={[
-        styles.messageContainer, 
+      style={[styles.messageContainer, 
         item.sender === 'You' ? styles.sentMessage : styles.receivedMessage
       ]}
     >
@@ -73,7 +70,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     padding: 15,
     textAlign: 'center',
-    backgroundColor: '#0084ff',
+    backgroundColor: '#037c6e',
     color: '#fff',
   },
   messageContainer: {
@@ -98,7 +95,8 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
+    paddingVertical: 15, // Increased vertical padding for height
+    paddingHorizontal: 10,
     borderTopWidth: 1,
     borderColor: '#ddd',
     backgroundColor: '#fff',
@@ -109,13 +107,15 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 25,
     paddingHorizontal: 15,
+    paddingVertical: 8,
     fontSize: 16,
   },
   sendButton: {
     marginLeft: 10,
-    backgroundColor: '#0084ff',
+    backgroundColor: '#037c6e',
     borderRadius: 25,
-    paddingHorizontal: 20,
+    paddingHorizontal: 25,
+    paddingVertical: 10,
     justifyContent: 'center',
   },
   sendButtonText: {
