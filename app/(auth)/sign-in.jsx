@@ -1,40 +1,55 @@
 import { View, Text, ScrollView, Image, Alert, TouchableOpacity } from "react-native";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CustomButton from "../../components/CustomButton";
 import FormField from "../../components/FormField";
 import { images } from "../../constants";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../firebase/firebase";
+import { auth, db } from "../../firebase/firebase"; // Ensure Firestore is imported
+import { doc, getDoc } from "firebase/firestore";
+import { useRouter } from "expo-router";
 
-const SignIn = () => {
-  const [isSubmitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
-  const [errorMessage, setErrorMessage] = useState("");
+export function SignIn() {
   const router = useRouter();
 
-  const submit = async () => {
-    if (form.email === "" || form.password === "") {
-      Alert.alert("Error", "Please fill in all fields");
-      return;
-    }
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-    setSubmitting(true);
-    setErrorMessage("");
+  const onSubmit = async () => {
+    if (!isSigningIn) {
+      setIsSigningIn(true);
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-    try {
-      await signInWithEmailAndPassword(auth, form.email, form.password);
-      Alert.alert("Success", "Signed in successfully");
-      router.replace("/home");
-    } catch (error) {
-      setErrorMessage(`Auth Error: ${error.code}`);
-      Alert.alert("Error", `Authentication failed: ${error.code}`);
-    } finally {
-      setSubmitting(false);
+        // Fetch the user's role from Firestore
+        const userDocRef = doc(db, "users", user.uid); // Assuming user roles are stored in Firestore under a "users" collection
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const userRole = userData.role; // Assuming 'role' field contains the role
+
+          // Redirect based on the user's role
+          if (userRole === 'admin') {
+            router.push("/admin/home");
+          } else if (userRole === 'candidate') {
+            router.push("/candidate/home");
+          } else if (userRole === 'recruiter') {
+            router.push("/recruiter/home");
+          } else {
+            throw new Error("Unknown user role");
+          }
+        } else {
+          throw new Error("User document not found");
+        }
+
+      } catch (err) {
+        setErrorMessage(`Auth Error: ${err.message}`);
+        setIsSigningIn(false);
+      }
     }
   };
 
@@ -50,8 +65,8 @@ const SignIn = () => {
 
           <FormField
             title="Email"
-            value={form.email}
-            handleChangeText={(e) => setForm({ ...form, email: e })}
+            value={email}
+            handleChangeText={setEmail}
             otherStyles="mt-7"
             keyboardType="email-address"
             placeholder="Enter your email"
@@ -59,8 +74,8 @@ const SignIn = () => {
 
           <FormField
             title="Password"
-            value={form.password}
-            handleChangeText={(e) => setForm({ ...form, password: e })}
+            value={password}
+            handleChangeText={setPassword}
             otherStyles="mt-7"
             placeholder="Enter your password"
           />
@@ -73,9 +88,9 @@ const SignIn = () => {
 
           <CustomButton
             title="Sign In"
-            handlePress={submit}
+            handlePress={onSubmit}
             containerStyles={{ marginBottom: 20 }}
-            isLoading={isSubmitting}
+            isLoading={isSigningIn}
           />
 
           <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
@@ -92,6 +107,6 @@ const SignIn = () => {
       </ScrollView>
     </SafeAreaView>
   );
-};
+}
 
 export default SignIn;

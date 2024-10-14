@@ -32,7 +32,7 @@ const SignUp = () => {
   });
   const [role, setRole] = useState(''); 
   const [showForm, setShowForm] = useState(false); 
-  const [errorMessage, setErrorMessage] = useState(''); // Error handling
+  const [errorMessage, setErrorMessage] = useState('');
   const router = useRouter();
 
   const submit = async () => {
@@ -65,12 +65,10 @@ const SignUp = () => {
         createdAt: new Date(),
       });
 
-      // Registration successful
       Alert.alert("Success", "User registered successfully");
       router.replace("/sign-in");
 
     } catch (error) {
-      // Catch and show any Firebase errors
       setErrorMessage(error.message);
       Alert.alert("Error", error.message);
     } finally {
