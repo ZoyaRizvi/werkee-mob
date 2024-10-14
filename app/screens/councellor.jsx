@@ -1,23 +1,78 @@
-import React from 'react';
-import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, Dimensions, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import axios from 'axios';
 
 const { width } = Dimensions.get('window'); // Get screen width
 
 const Councellor = ({ navigation }) => {
+  const [question, setQuestion] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [generatingAnswer, setGeneratingAnswer] = useState(false);
+  const [conversationStarted, setConversationStarted] = useState(false); // Track if conversation has started
+
+  // Helper function to construct conversation history as a string
+  const getConversationHistory = () => {
+    return messages
+      .map((msg) => (msg.sender === 'user' ? `User: ${msg.text}` : `Bot: ${msg.text}`))
+      .join('\n');
+  };
+
+  async function generateAnswer() {
+    if (!question.trim()) return;
+
+    // Add the user's message to the chat history
+    const newMessages = [...messages, { sender: 'user', text: question }];
+    setMessages(newMessages);
+    setQuestion(''); // Clear the input
+
+    setGeneratingAnswer(true);
+
+    // Construct the full conversation prompt
+    let fullPrompt = getConversationHistory() + '\nUser: ' + question;
+
+    // If it's the first message, include the predefined prompt
+    if (!conversationStarted) {
+      const initialPrompt =
+        "You are a career counseling bot for a freelancing platform named Werky. Guide users based on their age and interests, and suggest them latest tools and technologies which are in trend nowadays for making money. Keep track of the conversation context and provide meaningful responses.";
+      fullPrompt = `${initialPrompt}\n\n${fullPrompt}`;
+      setConversationStarted(true); // Mark the conversation as started
+    }
+
+    try {
+      const response = await axios({
+        url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=AIzaSyAV4yuWVHXVL-6JSG23G7tWPYPxYuDNx_0', // Replace with your actual API key
+        method: 'post',
+        data: {
+          contents: [{ parts: [{ text: fullPrompt }] }],
+        },
+      });
+
+      const botResponse = response.data.candidates[0].content.parts[0].text;
+
+      // Add the bot's response to the chat history
+      setMessages([...newMessages, { sender: 'bot', text: botResponse }]);
+    } catch (error) {
+      console.log(error);
+      setMessages([...newMessages, { sender: 'bot', text: 'Sorry - Something went wrong. Please try again!' }]);
+    }
+
+    setGeneratingAnswer(false);
+  }
+
   return (
     <View style={styles.container}>
-      {/* Header with back button, profile image and icons */}
+      {/* Header with back button, profile image, and icons */}
       <View style={styles.header}>
         {/* Back Button */}
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={24} color="#000" style={styles.backButton} />
         </TouchableOpacity>
-        
+
         <View style={styles.profileInfo}>
-          <Image 
-            source={{ uri: 'https://randomuser.me/api/portraits/women/1.jpg' }} 
-            style={styles.profileImage} 
+          <Image
+            source={{ uri: 'https://randomuser.me/api/portraits/women/1.jpg' }}
+            style={styles.profileImage}
           />
           <Text style={styles.userName}>Dalen Haywood</Text>
         </View>
@@ -28,35 +83,38 @@ const Councellor = ({ navigation }) => {
       </View>
 
       {/* Message container */}
-      <View style={styles.messageContainer}>
-        {/* User message */}
-        <View style={styles.userMessage}>
-          <Text style={styles.userMessageText}>HI</Text>
-        </View>
-
-        {/* Bot message */}
-        <View style={styles.botMessageContainer}>
-          <Image 
-            source={{ uri: 'https://www.shutterstock.com/image-vector/3d-vector-robot-chatbot-ai-260nw-2294117979.jpg' }} 
-            style={styles.botImage} 
-          />
-          <View style={styles.botMessage}>
-            <Text style={styles.botMessageText}>
-              Hi there! 👋 Welcome to Werky! 😊 I'm your friendly career counseling bot. 
-              Tell me, what are you interested in? What kind of work do you see yourself doing? 🤔 
-              And what's your age range? Knowing these things will help me recommend the best freelancing opportunities and tools for you. 😁
-            </Text>
+      <ScrollView style={styles.messageContainer}>
+        {/* Loop through all messages */}
+        {messages.map((msg, index) => (
+          <View key={index} style={msg.sender === 'user' ? styles.userMessage : styles.botMessageContainer}>
+            {msg.sender === 'bot' && (
+              <Image
+                source={{ uri: 'https://www.shutterstock.com/image-vector/3d-vector-robot-chatbot-ai-260nw-2294117979.jpg' }}
+                style={styles.botImage}
+              />
+            )}
+            <View style={msg.sender === 'user' ? styles.userMessage : styles.botMessage}>
+              <Text style={msg.sender === 'user' ? styles.userMessageText : styles.botMessageText}>
+                {msg.text}
+              </Text>
+            </View>
           </View>
-        </View>
-      </View>
+        ))}
+      </ScrollView>
 
       {/* Input area */}
       <View style={styles.inputContainer}>
-        <TextInput 
-          style={styles.input} 
-          placeholder="Type your message..." 
+        <TextInput
+          style={styles.input}
+          placeholder="Type your message..."
+          value={question}
+          onChangeText={setQuestion}
         />
-        <TouchableOpacity style={styles.sendButton}>
+        <TouchableOpacity
+          style={styles.sendButton}
+          onPress={generateAnswer}
+          disabled={generatingAnswer}
+        >
           <Icon name="send" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -103,7 +161,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userMessage: {
-    alignSelf: 'flex-end', // Align user message to the right
+    alignSelf: 'flex-end',
     backgroundColor: '#dceffc',
     padding: 10,
     borderRadius: 20,
@@ -122,7 +180,7 @@ const styles = StyleSheet.create({
   botImage: {
     width: 40,
     height: 40,
-    borderRadius:20,
+    borderRadius: 20,
     marginRight: 10,
   },
   botMessage: {
@@ -161,4 +219,5 @@ const styles = StyleSheet.create({
 });
 
 export default Councellor;
+
 
