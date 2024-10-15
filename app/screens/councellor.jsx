@@ -62,25 +62,6 @@ const Councellor = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Header with back button, profile image, and icons */}
-      <View style={styles.header}>
-        {/* Back Button */}
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size={24} color="#000" style={styles.backButton} />
-        </TouchableOpacity>
-
-        <View style={styles.profileInfo}>
-          <Image
-            source={{ uri: 'https://randomuser.me/api/portraits/women/1.jpg' }}
-            style={styles.profileImage}
-          />
-          <Text style={styles.userName}>Dalen Haywood</Text>
-        </View>
-        <View style={styles.icons}>
-          <Icon name="bell" size={24} color="#666" style={styles.icon} />
-          <Icon name="gear" size={24} color="#666" style={styles.icon} />
-        </View>
-      </View>
 
       {/* Message container */}
       <ScrollView style={styles.messageContainer}>

@@ -8,20 +8,6 @@ const Profile = () => {
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
-        {/* Header Section */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.menuIcon}>
-            <IconButton icon="menu" size={24} onPress={() => {}} />
-          </TouchableOpacity>
-          <View style={styles.profileIconContainer}>
-            <Avatar.Image size={30} source={{ uri: 'https://example.com/avatar.jpg' }} />
-            <Text style={styles.profileName}>Dalen Haywood</Text>
-          </View>
-          <View style={styles.headerIcons}>
-            <IconButton icon="bell-outline" size={24} onPress={() => {}} />
-            <IconButton icon="cog-outline" size={24} onPress={() => {}} />
-          </View>
-        </View>
 
         {/* Breadcrumb Section */}
         <View style={styles.breadcrumb}>

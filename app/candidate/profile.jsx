@@ -8,20 +8,7 @@ const Profile = () => {
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
-        {/* Header Section */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.menuIcon}>
-            <IconButton icon="menu" size={24} onPress={() => {}} />
-          </TouchableOpacity>
-          <View style={styles.profileIconContainer}>
-            <Avatar.Image size={30} source={{ uri: 'https://example.com/avatar.jpg' }} />
-            <Text style={styles.profileName}>Dalen Haywood</Text>
-          </View>
-          <View style={styles.headerIcons}>
-            <IconButton icon="bell-outline" size={24} onPress={() => {}} />
-            <IconButton icon="cog-outline" size={24} onPress={() => {}} />
-          </View>
-        </View>
+
 
         {/* Breadcrumb Section */}
         <View style={styles.breadcrumb}>
@@ -131,35 +118,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     alignItems: 'center',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    padding: 10,
-    backgroundColor: '#fff',
-    elevation: 4,
-    zIndex: 1,
-  },
-  menuIcon: {
-    flex: 0.2,
-  },
-  profileIconContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 0.6,
-    justifyContent: 'center',
-  },
-  profileName: {
-    marginLeft: 10,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    flex: 0.2,
-    justifyContent: 'flex-end',
-  },
   breadcrumb: {
     width: '90%',
     marginTop: 10,
@@ -172,7 +130,7 @@ const styles = StyleSheet.create({
   },
   backgroundImage: {
     position: 'absolute',
-    top: 80, // Adjust according to header height
+    top: 60, // Adjust according to header height
     width: '100%',
     height: 200,
     zIndex: -1, // Ensure it is behind other components

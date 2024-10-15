@@ -4,8 +4,7 @@ import { Text, View, ScrollView, Image, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { images } from '../constants';
 import CustomButton from '../components/CustomButton';
-import Councellor from './screens/councellor';
-import SkillAssessmentScreen from './screens/SkillAssessmentScreen3';
+
 
 export default function App() {
   return (

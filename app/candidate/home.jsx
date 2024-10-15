@@ -88,20 +88,6 @@ export function Home() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
-                {/* Header Section */}
-                <View style={styles.header}>
-          <TouchableOpacity style={styles.menuIcon}>
-            <IconButton icon="menu" size={24} onPress={() => {}} />
-          </TouchableOpacity>
-          <View style={styles.profileIconContainer}>
-            <Avatar.Image size={30} source={{ uri: 'https://example.com/avatar.jpg' }} />
-            <Text style={styles.profileName}>Dalen Haywood</Text>
-          </View>
-          <View style={styles.headerIcons}>
-            {/* <IconButton icon="bell-outline" size={24} onPress={() => {}} /> */}
-            <IconButton icon="cog-outline" size={24} onPress={() => {}} />
-          </View>
-        </View>
         <View style={styles.banner}>
           <Text style={styles.bannerText}>
             Find your <Text style={{ color: '#51834f' }}>new job</Text> today
@@ -158,7 +144,7 @@ const CardCustom = ({ data }) => {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop:20,
+    marginTop:0,
     flex: 1,
     padding: 16,
     backgroundColor: '#ffffff',
@@ -194,7 +180,7 @@ const styles = StyleSheet.create({
   },
   banner: {
     backgroundColor: '#FFF2E1',
-    padding: 20,
+    padding: 0,
     borderRadius: 8,
     marginTop:20,
     marginBottom: 16,
