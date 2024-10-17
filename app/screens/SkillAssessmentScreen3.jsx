@@ -1,73 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
-import { db } from '../../firebase/firebase';
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { RadioButton } from 'react-native-paper';
+import { ScrollView } from 'react-native';
 import axios from 'axios';
-import { getAuth } from 'firebase/auth';
+import CustomButton from '../../components/CustomButton';
 
 const generateQuestionsFromGemini = async (skill, level) => {
   try {
     const prompt = `Generate 10 multiple choice questions related to ${skill} at the ${level} level. Ensure the result is in JSON format, with questions, options, and correct answers correctly nested.`;
 
-    const response = await axios.post(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyBK9A3pPDR_lduTqoiBFFn4DUe-P9y8Kk4',
-      {
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-            ],
-          },
-        ],
-      }
-    );
+    const response = await axios.post('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyBK9A3pPDR_lduTqoiBFFn4DUe-P9y8Kk4', {
+      contents: [
+        { parts: [{ text: prompt }] }
+      ]
+    });
 
-    // Log the raw response data for debugging
-    console.log("Raw Response:", response.data);
-
-    // Check if response data has the expected structure
     if (!response.data || !response.data.candidates || response.data.candidates.length === 0) {
-      console.error("Invalid response structure:", response.data);
-      return []; // Return an empty array if the structure is invalid
+      return [];
     }
 
     const fixedJsonText = fixJsonText(response.data.candidates[0].content.parts[0].text);
-    
-    // Attempt to parse the JSON
     try {
       const quizData = JSON.parse(fixedJsonText);
-
-      // Check if quizData has a 'questions' property
-      if (!quizData.questions || !Array.isArray(quizData.questions)) {
-        console.error("Parsed data does not contain questions array:", quizData);
-        return []; // Return an empty array if 'questions' is not an array
-      }
-
-      return quizData.questions; // Return the questions array to the calling function
-    } catch (parseError) {
-      console.error("JSON Parse Error:", parseError);
-      console.error("Response Data:", fixedJsonText); // Log the data that failed to parse
-      return []; // Return an empty array in case of parsing error
+      return quizData.questions.map((question, index) => ({
+        ...question,
+        id: index
+      }));
+    } catch {
+      return [];
     }
-  } catch (error) {
-    console.log("Error generating questions:", error);
-    return []; // Return an empty array in case of request error
+  } catch {
+    return [];
   }
 };
 
-
-// Function to fix JSON formatting issues in the API response
 function fixJsonText(jsonText) {
-  jsonText = jsonText.replace(/\n/g, "\n");
-  jsonText = jsonText.replace(/\t/g, "\t");
-  jsonText = jsonText.replace(/\"/g, '"');
-  jsonText = jsonText.replace(/\r\n/g, "\n");
-  jsonText = jsonText.replace(/\r/g, "\n");
-  jsonText = jsonText.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2": ');
-  jsonText = jsonText.replace("```json", "");
-  jsonText = jsonText.replace("```", "");
-
-  return jsonText;
+  return jsonText
+    .replace(/\n/g, '\n')
+    .replace(/\t/g, '\t')
+    .replace(/\"/g, '"')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2": ')
+    .replace('```json', '')
+    .replace('```', '');
 }
 
 const SkillAssessmentScreen = () => {
@@ -75,49 +52,36 @@ const SkillAssessmentScreen = () => {
   const [selectedSkill, setSelectedSkill] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [userAnswers, setUserAnswers] = useState({});
-  const [score, setScore] = useState(null);
-  const [assessmentId, setAssessmentId] = useState(null);
+  const [answers, setAnswers] = useState({});
+  const [showScoreDialog, setShowScoreDialog] = useState(false);
+  const [score, setScore] = useState(0);
+  const [passStatus, setPassStatus] = useState('');
 
-  const skills = ['Project Management', 'DevOps', 'Content Writing', 'Video Editing', 'Marketing', 'Technical Writing', 'SQA', 'Graphic Designing'];
+  const skillsList = ['Project Management', 'DevOps', 'Content Writing', 'Video Editing', 'Marketing', 'Technical Writing', 'SQA', 'Graphic Designing'];
+
+  useFocusEffect(
+    useCallback(() => {
+      // Reset all states when the screen is focused
+      setSelectedLevel(null);
+      setSelectedSkill(null);
+      setQuestions([]);
+      setAnswers({});
+      setScore(0);
+      setPassStatus('');
+      setShowScoreDialog(false);
+    }, [])
+  );
 
   useEffect(() => {
-    const fetchOrGenerateQuestions = async () => {
-      setLoading(true);
-      try {
-        const questionsSnapshot = await getDocs(collection(db, `assessments/${selectedSkill}_${selectedLevel}/questions`));
-
-        if (questionsSnapshot.empty) {
-          const generatedQuestions = await generateQuestionsFromGemini(selectedSkill, selectedLevel);
-
-          if (Array.isArray(generatedQuestions)) {
-            setQuestions(generatedQuestions);
-            setAssessmentId(`${selectedSkill}_${selectedLevel}`);
-
-            // Store generated questions in Firestore
-            generatedQuestions.forEach(async (question) => {
-              await setDoc(doc(db, `assessments/${selectedSkill}_${selectedLevel}/questions`, question.id), question);
-            });
-          } else {
-            console.error("Error: generatedQuestions is not an array.");
-            setQuestions([]); // Set empty questions array if the format is incorrect
-          }
-        } else {
-          // Fetch questions from Firestore
-          const fetchedQuestions = questionsSnapshot.docs.map(doc => doc.data());
-          setQuestions(fetchedQuestions);
-        }
-      } catch (error) {
-        console.error("Error fetching or generating questions:", error.message);
-        setQuestions([]); // Handle the error by setting an empty array
-      } finally {
+    const fetchQuestions = async () => {
+      if (selectedSkill && selectedLevel) {
+        setLoading(true);
+        const fetchedQuestions = await generateQuestionsFromGemini(selectedSkill, selectedLevel);
+        setQuestions(fetchedQuestions);
         setLoading(false);
       }
     };
-
-    if (selectedSkill && selectedLevel) {
-      fetchOrGenerateQuestions();
-    }
+    fetchQuestions();
   }, [selectedSkill, selectedLevel]);
 
   const handleLevelSelect = (level) => {
@@ -128,38 +92,16 @@ const SkillAssessmentScreen = () => {
     setSelectedSkill(skill);
   };
 
-  const handleAnswerSelect = (questionId, answer) => {
-    setUserAnswers((prevAnswers) => ({ ...prevAnswers, [questionId]: answer }));
+  const handleAnswerSelect = (questionId, option) => {
+    setAnswers((prevAnswers) => ({ ...prevAnswers, [questionId]: option }));
   };
 
-  const calculateScore = async () => {
-    let correctCount = 0;
-    questions.forEach((question) => {
-      if (userAnswers[question.id] === question.correctAnswer) {
-        correctCount += 1;
-      }
-    });
-
-    setScore(correctCount);
-
-    if (assessmentId) {
-      const assessmentDocRef = doc(db, 'assessments', assessmentId);
-      await setDoc(assessmentDocRef, { response: userAnswers, score: correctCount }, { merge: true });
-
-      const auth = getAuth();
-      const user = auth.currentUser;
-
-      if (user && correctCount >= 8) {
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        const existingBadges = userDoc.data()?.badges || [];
-
-        if (!existingBadges.includes(selectedSkill)) {
-          existingBadges.push(selectedSkill);
-          await updateDoc(userDocRef, { badges: existingBadges });
-        }
-      }
-    }
+  const calculateScore = () => {
+    const correctAnswers = questions.filter((q) => answers[q.id] === q.correctAnswer);
+    const score = correctAnswers.length;
+    setScore(score);
+    setPassStatus(score >= questions.length / 2 ? 'Passed' : 'Failed');
+    setShowScoreDialog(true);
   };
 
   return (
@@ -168,13 +110,12 @@ const SkillAssessmentScreen = () => {
         <View style={styles.levelSelection}>
           <Text style={styles.title}>Select Your Level</Text>
           {['Entry', 'Basic', 'Intermediate', 'Advanced'].map((level) => (
-            <TouchableOpacity
+            <CustomButton
               key={level}
-              style={styles.button}
-              onPress={() => handleLevelSelect(level)}
-            >
-              <Text style={styles.buttonText}>{level}</Text>
-            </TouchableOpacity>
+              title={level}
+              handlePress={() => handleLevelSelect(level)}
+              containerStyles={{ backgroundColor: '#38B2AC' }}
+            />
           ))}
         </View>
       )}
@@ -182,60 +123,75 @@ const SkillAssessmentScreen = () => {
       {selectedLevel && !selectedSkill && (
         <View style={styles.skillSelection}>
           <Text style={styles.title}>Select a Skill (Level: {selectedLevel})</Text>
-          {skills.map((skill) => (
-            <TouchableOpacity
+          {skillsList.map((skill) => (
+            <CustomButton
               key={skill}
-              style={styles.button}
-              onPress={() => handleSkillSelect(skill)}
-            >
-              <Text style={styles.buttonText}>{skill}</Text>
-            </TouchableOpacity>
+              title={skill}
+              handlePress={() => handleSkillSelect(skill)}
+              containerStyles={{ backgroundColor: '#38B2AC' }}
+            />
           ))}
-          <TouchableOpacity onPress={() => setSelectedLevel(null)} style={styles.backButton}>
-            <Text style={styles.backButtonText}>Back to Level Selection</Text>
-          </TouchableOpacity>
         </View>
       )}
 
-      {selectedLevel && selectedSkill && (
-        <View style={styles.questionContainer}>
-          <Text style={styles.title}>Questions for {selectedSkill} ({selectedLevel})</Text>
+      {selectedSkill && (
+        <ScrollView style={styles.questionContainer}>
+          <Text style={styles.title}>
+            Skill Assessment for <Text style={styles.skillName}>{selectedSkill}</Text>
+          </Text>
           {loading ? (
-            <ActivityIndicator size="large" color="#0000ff" />
+            <ActivityIndicator size="large" color="#38B2AC" />
           ) : (
-            <FlatList
-              data={questions}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <View style={styles.questionItem}>
-                  <Text style={styles.questionText}>{item.question}</Text>
-                  {item.options.map((option, idx) => (
-                    <TouchableOpacity
-                      key={idx}
-                      style={styles.button}
-                      onPress={() => handleAnswerSelect(item.id, option)}
-                    >
-                      <Text style={styles.buttonText}>{option}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+            <>
+              {questions.length > 0 ? (
+                <FlatList
+                  data={questions}
+                  keyExtractor={(item) => item.id.toString()}
+                  renderItem={({ item }) => (
+                    <View style={styles.questionItem}>
+                      <Text style={styles.questionText}>{item.question}</Text>
+                      {item.options.map((option) => (
+                        <View key={option} style={styles.radioButtonContainer}>
+                          <RadioButton
+                            value={option}
+                            status={answers[item.id] === option ? 'checked' : 'unchecked'}
+                            onPress={() => handleAnswerSelect(item.id, option)}
+                          />
+                          <Text style={styles.radioButtonText}>{option}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                />
+              ) : (
+                <Text>No questions available.</Text>
               )}
+              <CustomButton
+                title="Submit"
+                handlePress={calculateScore}
+                isLoading={loading}
+                containerStyles={{ opacity: Object.keys(answers).length === questions.length ? 1 : 0.5 }}
+                textStyles={{ color: '#FFF' }}
+                disabled={Object.keys(answers).length !== questions.length}
+              />
+            </>
+          )}
+        </ScrollView>
+      )}
+      {/* Score Dialog */}
+      {showScoreDialog && (
+        <View style={styles.scoreDialogContainer}>
+          <View style={styles.scoreDialog}>
+            <Text style={styles.title}>{passStatus === 'Passed' ? 'Congratulations!' : 'Sorry!'}</Text>
+            <Text style={styles.scoreText}>You scored {score} out of {questions.length}</Text>
+            <CustomButton
+              title="OK"
+              handlePress={() => {
+                setShowScoreDialog(false);
+              }}
+              containerStyles={{ backgroundColor: '#007AFF' }}
             />
-          )}
-
-          <TouchableOpacity onPress={calculateScore} style={styles.backButton}>
-            <Text style={styles.backButtonText}>Submit and Calculate Score</Text>
-          </TouchableOpacity>
-
-          {score !== null && (
-            <View style={styles.scoreContainer}>
-              <Text style={styles.scoreText}>Your Score: {score} / {questions.length}</Text>
-            </View>
-          )}
-
-          <TouchableOpacity onPress={() => setSelectedSkill(null)} style={styles.backButton}>
-            <Text style={styles.backButtonText}>Back to Skill Selection</Text>
-          </TouchableOpacity>
+          </View>
         </View>
       )}
     </View>
@@ -243,58 +199,35 @@ const SkillAssessmentScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, padding: 16 },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
+  skillName: { fontWeight: 'bold', color: '#38B2AC' },
+  questionContainer: { marginTop: 20 },
+  questionItem: { marginBottom: 20 },
+  questionText: { fontSize: 18, marginBottom: 10 },
+  radioButtonContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
+  radioButtonText: { marginLeft: 8 },
+  scoreDialogContainer: {
     flex: 1,
-    padding: 20,
     justifyContent: 'center',
-    backgroundColor: '#E5E5E5',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  button: {
+  scoreDialog: {
+    width: 300,
+    padding: 20,
     backgroundColor: 'white',
-    padding: 15,
-    marginVertical: 10,
-    borderColor: 'black',
     borderRadius: 10,
-  },
-  buttonText: {
-    color: 'black',
-    fontSize: 18,
-    textAlign: 'center',
-  },
-  backButton: {
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: 'teal',
-    borderRadius: 5,
-  },
-  backButtonText: {
-    color: 'white',
-    textAlign: 'center',
-  },
-  questionContainer: {
-    flex: 1,
-  },
-  questionItem: {
-    backgroundColor: '#f5f5f5',
-    padding: 15,
-    marginBottom: 10,
-    borderRadius: 10,
-  },
-  questionText: {
-    fontSize: 18,
-  },
-  scoreContainer: {
-    marginTop: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    elevation: 5,
   },
   scoreText: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 20,
     textAlign: 'center',
   },
 });
