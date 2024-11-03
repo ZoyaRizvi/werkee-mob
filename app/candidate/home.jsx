@@ -120,16 +120,23 @@ export function Home() {
 };
 
 const CardCustom = ({ data }) => {
+  // Convert the postedDate string to a Date object and format it
+  const formattedDate = new Date(data.postedDate).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+
   return (
     <View style={styles.jobItem}>
-      <Image source={{ uri: data.imageUrl }} style={styles.jobImage} />
+      <Image source={{ uri: data.companyLogo }} style={styles.jobImage} />
       <View style={styles.jobDetailsContainer}>
         <Text style={styles.jobTitle}>{data.title}</Text>
-        <Text style={styles.jobCompany}>{data.company}</Text>
-        <Text style={styles.jobExtraDetails}>Requirements: {data.requirements}</Text>
-        <Text style={styles.jobExtraDetails}>Location: {data.location}</Text>
-        <Text style={styles.jobExtraDetails}>Contract Type: {data.contractType}</Text>
-        <Text style={styles.jobExtraDetails}>Posted on: {data.postedDate}</Text>
+        <Text style={styles.jobCompany}>{data.companyName}</Text>
+        <Text style={styles.jobExtraDetails}>Requirements: {data.Requirements}</Text>
+        <Text style={styles.jobExtraDetails}>Location: {data.jobLocation}</Text>
+        <Text style={styles.jobExtraDetails}>Contract Type: {data.employmentType}</Text>
+        <Text style={styles.jobExtraDetails}>Posted on: {formattedDate}</Text>
         <Text style={styles.jobDescription}>{data.description}</Text>
         {/* Apply Button */}
         <CustomButton
