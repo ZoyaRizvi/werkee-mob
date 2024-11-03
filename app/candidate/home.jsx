@@ -8,21 +8,26 @@ import {
   TextInput,
   Image,
   ActivityIndicator,
-  TouchableOpacity
+  Alert,
+  Modal,
+  TouchableOpacity,
+  Button,
 } from 'react-native';
-import { Avatar, Button, Card, Title, Paragraph, IconButton, Chip } from 'react-native-paper';
-import { collectionGroup, getDocs } from "firebase/firestore";
-import { db } from "../../firebase/firebase";
+import { collection, collectionGroup, getDocs, addDoc, doc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { onAuthStateChanged } from 'firebase/auth';
+import { db, storage, auth } from "../../firebase/firebase";
 import CustomButton from '../../components/CustomButton';
 
 export function Home() {
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(null);
   const [jobs, setJobs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
   const [query, setQuery] = useState("");
-  const itemsPerPage = 6;
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({ name: '', resume: null, coverLetter: '' });
+  const [currentUserEmail, setCurrentUserEmail] = useState('');
+  const [selectedJob, setSelectedJob] = useState(null);
 
   const fetchPost = async () => {
     try {
@@ -42,59 +47,74 @@ export function Home() {
   useEffect(() => {
     setIsLoading(true);
     fetchPost();
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setCurrentUserEmail(user.email);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const handleInputChange = (text) => {
-    setQuery(text);
+  const handleInputChange = (name, value) => {
+    setFormData((prevData) => ({ ...prevData, [name]: value }));
   };
 
-  const calculatePageRange = () => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return { startIndex, endIndex };
+  const handleFileChange = async () => {
+    // Code for selecting and uploading a file goes here
+    // This is a placeholder; React Native file picker libraries can help
+    // e.g., using react-native-document-picker to pick files
+    // Then update formData with resume file information
   };
 
-  const filteredData = (jobs, selectedCategory, selectedDate, query) => {
-    let filteredJobs = jobs;
-
-    if (query) {
-      filteredJobs = filteredJobs.filter((job) =>
-        (job.title || "").toLowerCase().includes(query.toLowerCase())
-      );
+  const handleSubmit = async () => {
+    if (!formData.name || !formData.coverLetter || !formData.resume) {
+      Alert.alert("All fields are required!");
+      return;
     }
 
-    if (selectedCategory) {
-      filteredJobs = filteredJobs.filter((job) =>
-        job.jobLocation && job.jobLocation.toLowerCase().includes(selectedCategory.toLowerCase())
-      );
-    }
+    try {
+      const resumeRef = ref(storage, `resumes/${formData.resume.name}`);
+      await uploadBytes(resumeRef, formData.resume);
+      const resumeUrl = await getDownloadURL(resumeRef);
 
-    if (selectedDate) {
-      const selectedDateObj = new Date(selectedDate);
-      filteredJobs = filteredJobs.filter((job) => {
-        const jobPostingDate = new Date(job.postedDate);
-        return jobPostingDate >= selectedDateObj;
+      const recruiterDocRef = doc(db, 'JobResponses', selectedJob.recruiter_id);
+      const applicationsCollectionRef = collection(recruiterDocRef, 'applications');
+
+      await addDoc(applicationsCollectionRef, {
+        ...formData,
+        email: currentUserEmail,
+        resume: resumeUrl,
+        jobId: selectedJob.id,
+        jobTitle: selectedJob.title,
+        timestamp: new Date(),
       });
+
+      Alert.alert("Application submitted successfully");
+      setIsModalOpen(false);
+      setFormData({ name: '', resume: null, coverLetter: '' });
+    } catch (e) {
+      console.error("Error adding document: ", e);
+      Alert.alert("Error submitting application");
     }
-
-    const { startIndex, endIndex } = calculatePageRange();
-    filteredJobs = filteredJobs.slice(startIndex, endIndex);
-
-    return filteredJobs.map((data, i) => <CardCustom key={i} data={data} />);
   };
 
-  const result = filteredData(jobs, selectedCategory, selectedDate, query);
+  const openApplyModal = (job) => {
+    setSelectedJob(job);
+    setIsModalOpen(true);
+  };
+
+  const filteredData = jobs.map((data, i) => (
+    <CardCustom key={i} data={data} openApplyModal={openApplyModal} />
+  ));
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
         <View style={styles.banner}>
-          <Text style={styles.bannerText}>
-            Find your <Text style={{ color: '#51834f' }}>new job</Text> today
-          </Text>
-          <Text style={styles.bannerSubText}>
-            Endless opportunities are just around the corner—dive in and grab yours.
-          </Text>
+          <Text style={styles.bannerText}>Find your <Text style={{ color: '#51834f' }}>new job</Text> today</Text>
+          <Text style={styles.bannerSubText}>Endless opportunities are just around the corner—dive in and grab yours.</Text>
 
           <View style={styles.searchContainer}>
             <TextInput
@@ -102,7 +122,7 @@ export function Home() {
               placeholder="What jobs are you looking for?"
               placeholderTextColor="#999"
               value={query}
-              onChangeText={handleInputChange}
+              onChangeText={setQuery}
             />
           </View>
         </View>
@@ -111,16 +131,46 @@ export function Home() {
           <ActivityIndicator size="large" color="#51834f" />
         ) : (
           <View style={styles.card}>
-            {result}
+            {filteredData}
           </View>
         )}
       </ScrollView>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isModalOpen}
+        onRequestClose={() => setIsModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Apply for {selectedJob?.title}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Name"
+              value={formData.name}
+              onChangeText={(text) => handleInputChange('name', text)}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Cover Letter"
+              value={formData.coverLetter}
+              onChangeText={(text) => handleInputChange('coverLetter', text)}
+            />
+            {/* Placeholder for File Picker */}
+            <Button title="Select Resume" onPress={handleFileChange} />
+            <View style={styles.buttonContainer}>
+              <Button title="Submit" onPress={handleSubmit} color="#009B81" />
+              <Button title="Cancel" onPress={() => setIsModalOpen(false)} color="#ff0000" />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
-};
+}
 
-const CardCustom = ({ data }) => {
-  // Convert the postedDate string to a Date object and format it
+const CardCustom = ({ data, openApplyModal }) => {
   const formattedDate = new Date(data.postedDate).toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'long',
@@ -138,10 +188,9 @@ const CardCustom = ({ data }) => {
         <Text style={styles.jobExtraDetails}>Contract Type: {data.employmentType}</Text>
         <Text style={styles.jobExtraDetails}>Posted on: {formattedDate}</Text>
         <Text style={styles.jobDescription}>{data.description}</Text>
-        {/* Apply Button */}
         <CustomButton
           title="Apply"
-          handlePress={() => alert(`Applying for ${data.title}`)}
+          handlePress={() => openApplyModal(data)}
           containerStyles={styles.applyButtonContainer}
         />
       </View>
@@ -151,47 +200,17 @@ const CardCustom = ({ data }) => {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop:0,
     flex: 1,
     padding: 16,
     backgroundColor: '#ffffff',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    padding: 10,
-    backgroundColor: '#fff',
-    elevation: 4,
-    zIndex: 1,
-  },
-  menuIcon: {
-    flex: 0.2,
-  },
-  profileIconContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 0.6,
-    justifyContent: 'center',
-  },
-  profileName: {
-    marginLeft: 10,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    flex: 0.2,
-    justifyContent: 'flex-end',
-  },
   banner: {
     backgroundColor: '#FFF2E1',
-    padding: 0,
     borderRadius: 8,
-    marginTop:20,
+    marginTop: 20,
     marginBottom: 16,
     alignItems: 'center',
+    padding: 16,
   },
   bannerText: {
     fontSize: 24,
@@ -200,7 +219,7 @@ const styles = StyleSheet.create({
   },
   bannerSubText: {
     color: 'rgba(0, 0, 0, 0.7)',
-    marginBottom: 32,
+    marginBottom: 16,
     fontSize: 18,
   },
   searchContainer: {
@@ -234,31 +253,29 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   jobImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    borderRadius: 8,
     marginRight: 16,
   },
   jobDetailsContainer: {
     flex: 1,
   },
   jobTitle: {
-    fontSize: 16,
     fontWeight: 'bold',
+    fontSize: 18,
   },
   jobCompany: {
-    fontSize: 14,
-    color: '#4a5568',
+    color: '#6b7280',
     marginBottom: 4,
   },
   jobExtraDetails: {
-    fontSize: 12,
-    color: '#718096',
+    color: '#9ca3af',
+    marginBottom: 2,
   },
   jobDescription: {
-    fontSize: 12,
-    color: '#4a5568',
-    marginVertical: 4,
+    color: '#4b5563',
+    marginBottom: 4,
   },
   applyButtonContainer: {
     marginTop: 10,
@@ -267,6 +284,36 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     backgroundColor: '#009B81',
     borderRadius: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 8,
+    width: '90%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  input: {
+    height: 40,
+    borderColor: '#ddd',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
   },
 });
 
