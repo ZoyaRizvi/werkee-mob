@@ -1,7 +1,7 @@
-
 import { useEffect } from "react";
 import { SplashScreen, Stack } from "expo-router";
 import { useFonts } from "expo-font";
+import { Provider as PaperProvider } from "react-native-paper";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -20,7 +20,6 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (error) throw error;
-
     if (fontsLoaded) {
       SplashScreen.hideAsync();
     }
@@ -30,16 +29,14 @@ export default function RootLayout() {
     return null;
   }
 
-  if (!fontsLoaded && !error) {
-    return null;
-  }
-
   return (
-    <Stack>
-      <Stack.Screen name="index" options={{headerShown:false}} />
-      <Stack.Screen name="(auth)" options={{headerShown:false}} />
-      <Stack.Screen name="candidate" options={{headerShown:false}} />
-      <Stack.Screen name="recruiter" options={{headerShown:false}} />
-  </Stack>
+    <PaperProvider>
+      <Stack>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="candidate" options={{ headerShown: false }} />
+        <Stack.Screen name="recruiter" options={{ headerShown: false }} />
+      </Stack>
+    </PaperProvider>
   );
 }

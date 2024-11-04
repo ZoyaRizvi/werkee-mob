@@ -6,7 +6,7 @@ import { images } from "../../constants";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from "expo-router";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { getFirestore, doc, setDoc } from "firebase/firestore"; // Firestore import
+import { getFirestore, doc, setDoc } from "firebase/firestore";
 
 const auth = getAuth();
 const db = getFirestore();

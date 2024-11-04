@@ -5,7 +5,7 @@ import FormField from "../../components/FormField";
 import { images } from "../../constants";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "../../firebase/firebase"; // Ensure Firestore is imported
+import { auth, db } from "../../firebase/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "expo-router";
 
