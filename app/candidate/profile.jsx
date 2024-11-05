@@ -111,7 +111,7 @@ const Profile = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text>Loading profile...</Text>
+        <Text style={styles.loadingText}>Loading profile...</Text>
       </View>
     );
   }
@@ -127,7 +127,7 @@ const Profile = () => {
         <Card style={styles.profileCard}>
           <View style={styles.profileHeader}>
             <Avatar.Image
-              size={70}
+              size={80}
               source={{ uri: profile.img || 'https://example.com/avatar.jpg' }}
               style={styles.avatar}
             />
@@ -151,7 +151,7 @@ const Profile = () => {
                 Message
               </Button>
               <Button mode="outlined" style={styles.button} onPress={() => { }}>
-                Skill Assessment
+                Skill Test
               </Button>
             </View>
 
@@ -209,9 +209,9 @@ const Profile = () => {
 
           <Modal visible={isModalOpen} onRequestClose={() => setIsModalOpen(false)}>
             <View style={styles.modalContent}>
-              <TextInput placeholder="Title" value={newProject.title} onChangeText={(text) => setNewProject({ ...newProject, title: text })} />
-              <TextInput placeholder="Tag" value={newProject.tag} onChangeText={(text) => setNewProject({ ...newProject, tag: text })} />
-              <TextInput placeholder="Description" value={newProject.description} onChangeText={(text) => setNewProject({ ...newProject, description: text })} />
+              <TextInput style={styles.input} placeholder="Title" value={newProject.title} onChangeText={(text) => setNewProject({ ...newProject, title: text })} />
+              <TextInput style={styles.input} placeholder="Tag" value={newProject.tag} onChangeText={(text) => setNewProject({ ...newProject, tag: text })} />
+              <TextInput style={styles.input} placeholder="Description" value={newProject.description} onChangeText={(text) => setNewProject({ ...newProject, description: text })} />
               <Button mode="contained" onPress={handleAddOrUpdateProject}>
                 {editingProjectId ? 'Update Project' : 'Add Project'}
               </Button>
@@ -223,167 +223,40 @@ const Profile = () => {
   );
 };
 
-  const styles = StyleSheet.create({
-    scrollContainer: {
-      flexGrow: 1,
-      paddingBottom: 20,
-    },
-    container: {
-      marginTop: 30,
-      flex: 1,
-      backgroundColor: '#f5f5f5',
-      alignItems: 'center',
-    },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      width: '100%',
-      padding: 10,
-      backgroundColor: '#fff',
-      elevation: 4,
-      zIndex: 1,
-    },
-    menuIcon: {
-      flex: 0.2,
-    },
-    profileIconContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flex: 0.6,
-      justifyContent: 'center',
-    },
-    profileName: {
-      marginLeft: 10,
-      fontSize: 16,
-      fontWeight: 'bold',
-    },
-    headerIcons: {
-      flexDirection: 'row',
-      flex: 0.2,
-      justifyContent: 'flex-end',
-    },
-    breadcrumb: {
-      width: '90%',
-      marginTop: 10,
-      flexDirection: 'row',
-      justifyContent: 'flex-start',
-    },
-    breadcrumbText: {
-      color: '#000',
-      fontSize: 14,
-    },
-    backgroundImage: {
-      position: 'absolute',
-      top: 80, // Adjust according to header height
-      width: '100%',
-      height: 200,
-      zIndex: -1, // Ensure it is behind other components
-      resizeMode: 'cover',
-      position: 'absolute', // Make the image cover the whole screen
-    },
-    overlay: {
-      ...StyleSheet.absoluteFillObject, // Make the overlay cover the entire screen
-      backgroundColor: 'rgba(0, 0, 0, 0.9)', // Semi-transparent black (adjust opacity to make it darker)
-    },
-    profileCard: {
-      marginTop: 100,
-      width: '90%',
-      borderRadius: 15,
-      padding: 20,
-      backgroundColor: '#fff',
-    },
-    profileHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 20,
-    },
-    avatar: {
-      marginRight: 15,
-    },
-    profileInfo: {
-      flex: 1,
-    },
-    name: {
-      fontSize: 20,
-      fontWeight: 'bold',
-    },
-    role: {
-      fontSize: 14,
-      color: '#888',
-    },
-    actionButtons: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 20,
-    },
-    button: {
-      flex: 0.48, // Ensure buttons take equal space
-    },
-    profileDescription: {
-      fontSize: 14,
-      color: '#555',
-    },
-    additionalInfo: {
-      marginTop: 20,
-    },
-    infoLabel: {
-      fontSize: 14,
-      fontWeight: 'bold',
-      marginTop: 10,
-    },
-    infoText: {
-      fontSize: 14,
-      color: '#555',
-    },
-    socialIcons: {
-      flexDirection: 'row',
-      marginTop: 5,
-    },
-    skillsContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      marginTop: 5,
-    },
-    skillChip: {
-      margin: 3,
-    },
-    badgeText: {
-      fontSize: 20,
-      marginTop: 5,
-    },
-    settingsIcon: {
-      marginLeft: 'auto',
-    },
-    workSection: {
-      width: '90%',
-      marginTop: 20,
-    },
-    workTitle: {
-      fontSize: 22,
-      fontWeight: 'bold',
-      marginBottom: 10,
-    },
-    uploadButton: {
-      marginBottom: 15,
-      alignSelf: 'flex-start',
-    },
-    workCard: {
-      borderRadius: 15,
-    },
-    workImage: {
-      width: '100%',
-      height: 150,
-      borderRadius: 15,
-    },
-    workTitleText: {
-      fontSize: 18,
-      fontWeight: 'bold',
-    },
-    workDescription: {
-      fontSize: 14,
-      color: '#555',
-    },
-  });
+const styles = StyleSheet.create({
+  scrollContainer: { paddingBottom: 50 },
+  container: { flex: 1, alignItems: 'center' },
+  backgroundImage: { width, height: width * 0.5, position: 'absolute', top: 0, opacity: 0.8 },
+  profileCard: { marginTop: width * 0.3, width: '90%', borderRadius: 8, padding: 16 },
+  profileHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  avatar: { backgroundColor: 'white' },
+  profileInfo: { marginLeft: 16 },
+  name: { fontSize: 24, fontWeight: 'bold' },
+  role: { fontSize: 16, color: 'gray' },
+  profileDescription: { marginVertical: 12, color: 'darkgray', lineHeight: 22 },
+  moreText: { color: 'blue', marginTop: 8 },
+  actionButtons: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 12 },
+  button: { flex: 1, marginHorizontal: 4 },
+  additionalInfo: { marginTop: 12 },
+  infoLabel: { fontWeight: '600', marginTop: 8 },
+  infoText: { color: 'gray', fontSize: 14 },
+  socialIcons: { flexDirection: 'row' },
+  skillsContainer: { flexDirection: 'row', flexWrap: 'wrap' },
+  skillChip: { marginRight: 6, marginTop: 4 },
+  noSkillsText: { color: 'gray' },
+  badgeText: { fontSize: 18 },
+  workSection: { width: '90%', marginTop: 16 },
+  workTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 12 },
+  uploadButton: { alignSelf: 'center', marginVertical: 12 },
+  workCard: { marginBottom: 12, padding: 10, borderColor: 'lightgray', borderWidth: 1, borderRadius: 8 },
+  workImage: { width: '100%', height: 120, borderRadius: 8, marginBottom: 8 },
+  workTitleText: { fontWeight: '600', fontSize: 16 },
+  workDescription: { color: 'gray', marginTop: 4 },
+  buttonRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  modalContent: { padding: 20, backgroundColor: 'white', margin: 20, borderRadius: 8 },
+  input: { marginBottom: 12, backgroundColor: 'white', borderColor: 'gray', borderWidth: 1, paddingHorizontal: 8, borderRadius: 4 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { fontSize: 18, color: 'gray' },
+});
 
-  export default Profile;
+export default Profile;
