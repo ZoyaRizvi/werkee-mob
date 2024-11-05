@@ -147,11 +147,12 @@ const Profile = () => {
               )}
             </Paragraph>
             <View style={styles.actionButtons}>
-              <Button mode="outlined" style={styles.button} onPress={() => { }}>
-                Message
-              </Button>
-              <Button mode="outlined" style={styles.button} onPress={() => { }}>
-                Skill Test
+              <Button
+                mode="outlined"
+                style={styles.button}
+                onPress={() => route.push('../screens/SkillAssessmentScreen')}
+              >
+                Skill Assessment
               </Button>
             </View>
 
