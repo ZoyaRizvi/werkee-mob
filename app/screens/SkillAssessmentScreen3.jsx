@@ -1,20 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, StyleSheet, Modal, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { RadioButton } from 'react-native-paper';
-import { ScrollView } from 'react-native';
-import axios from 'axios';
+import { db } from '../../firebase/firebase';
+import { updateDoc, doc, getDoc, setDoc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import CustomButton from '../../components/CustomButton';
+import axios from 'axios';
+import { useRouter } from "expo-router";
 
 const generateQuestionsFromGemini = async (skill, level) => {
   try {
     const prompt = `Generate 10 multiple choice questions related to ${skill} at the ${level} level. Ensure the result is in JSON format, with questions, options, and correct answers correctly nested.`;
-
-    const response = await axios.post('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyBK9A3pPDR_lduTqoiBFFn4DUe-P9y8Kk4', {
-      contents: [
-        { parts: [{ text: prompt }] }
-      ]
-    });
+    const response = await axios.post(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyBK9A3pPDR_lduTqoiBFFn4DUe-P9y8Kk4',
+      { contents: [{ parts: [{ text: prompt }] }] }
+    );
 
     if (!response.data || !response.data.candidates || response.data.candidates.length === 0) {
       return [];
@@ -23,29 +24,51 @@ const generateQuestionsFromGemini = async (skill, level) => {
     const fixedJsonText = fixJsonText(response.data.candidates[0].content.parts[0].text);
     try {
       const quizData = JSON.parse(fixedJsonText);
-      return quizData.questions.map((question, index) => ({
-        ...question,
-        id: index
+      const formattedQuestions = quizData.questions.map((question, index) => ({
+        id: index,
+        question: question.question,
+        options: question.options,
+        correct_answer: question.correctAnswer
       }));
-    } catch {
+
+      await saveQuestionsToFirebase(skill, level, formattedQuestions);
+
+      return formattedQuestions;
+    } catch (error) {
+      console.error('Error parsing JSON:', error);
       return [];
     }
-  } catch {
+  } catch (error) {
+    console.error('Error generating questions:', error);
     return [];
   }
 };
 
-function fixJsonText(jsonText) {
-  return jsonText
-    .replace(/\n/g, '\n')
-    .replace(/\t/g, '\t')
-    .replace(/\"/g, '"')
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
+const saveQuestionsToFirebase = async (skill, level, questions) => {
+  try {
+    const docRef = doc(db, 'assessment', `${skill}_${level}`);
+    const quizData = questions.reduce((acc, question, idx) => {
+      acc[idx] = {
+        question: question.question,
+        options: question.options,
+        correct_answer: question.correct_answer
+      };
+      return acc;
+    }, {});
+
+    await setDoc(docRef, { skill, level, quizData });
+    console.log('Questions successfully saved to Firebase');
+  } catch (error) {
+    console.error('Error saving questions to Firebase:', error);
+  }
+};
+
+const fixJsonText = (jsonText) => {
+  return jsonText.replace(/\n/g, '\n').replace(/\t/g, '\t').replace(/\"/g, '"')
+    .replace(/\r\n/g, '\n').replace(/\r/g, '\n')
     .replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2": ')
-    .replace('```json', '')
-    .replace('```', '');
-}
+    .replace('```json', '').replace('```', '');
+};
 
 const SkillAssessmentScreen = () => {
   const [selectedLevel, setSelectedLevel] = useState(null);
@@ -56,12 +79,12 @@ const SkillAssessmentScreen = () => {
   const [showScoreDialog, setShowScoreDialog] = useState(false);
   const [score, setScore] = useState(0);
   const [passStatus, setPassStatus] = useState('');
+  const router = useRouter();
 
   const skillsList = ['Project Management', 'DevOps', 'Content Writing', 'Video Editing', 'Marketing', 'Technical Writing', 'SQA', 'Graphic Designing'];
 
   useFocusEffect(
     useCallback(() => {
-      // Reset all states when the screen is focused
       setSelectedLevel(null);
       setSelectedSkill(null);
       setQuestions([]);
@@ -84,24 +107,78 @@ const SkillAssessmentScreen = () => {
     fetchQuestions();
   }, [selectedSkill, selectedLevel]);
 
-  const handleLevelSelect = (level) => {
-    setSelectedLevel(level);
+  const handleLevelSelect = (level) => setSelectedLevel(level);
+  const handleSkillSelect = (skill) => setSelectedSkill(skill);
+
+  const handleAnswerChange = (questionIndex, option) => {
+    setAnswers((prevAnswers) => ({ ...prevAnswers, [questionIndex]: option }));
   };
 
-  const handleSkillSelect = (skill) => {
-    setSelectedSkill(skill);
+  const isAllAnswered = () => questions.length > 0 && questions.length === Object.keys(answers).length;
+
+  const calculateScore = (quizData) => {
+    let correctCount = 0;
+    quizData.forEach((question, index) => {
+      const correctAnswer = question.correct_answer;
+      const userAnswer = answers[index];
+      if (userAnswer === correctAnswer) {
+        correctCount += 1;
+      }
+    });
+    return correctCount;
   };
 
-  const handleAnswerSelect = (questionId, option) => {
-    setAnswers((prevAnswers) => ({ ...prevAnswers, [questionId]: option }));
-  };
+  function handleDialogClose() {
+    setShowScoreDialog(false);
+  
+    if (passStatus === 'Passed') {
+      // Navigate to profile if the user has passed
+      router.push("/candidate/home");
+    } else {
+      // Reset the assessment if the user has failed
+      setSelectedSkill(null);
+      setSelectedLevel(null);
+      setAnswers({});
+      setScore(0);
+      setPassStatus('');
+      setQuestions([]);
+    }
+  }
 
-  const calculateScore = () => {
-    const correctAnswers = questions.filter((q) => answers[q.id] === q.correctAnswer);
-    const score = correctAnswers.length;
-    setScore(score);
-    setPassStatus(score >= questions.length / 2 ? 'Passed' : 'Failed');
-    setShowScoreDialog(true);
+  const handleSubmit = async () => {
+    if (selectedSkill && selectedLevel) {
+      try {
+        const assessmentDocRef = doc(db, 'assessment', `${selectedSkill}_${selectedLevel}`);
+        const assessmentDoc = await getDoc(assessmentDocRef);
+        const assessmentData = assessmentDoc.data();
+        const quizData = Object.values(assessmentData.quizData);
+
+        const userScore = calculateScore(quizData);
+        await updateDoc(assessmentDocRef, { response: answers, score: userScore });
+
+        const status = userScore >= 8 ? 'Passed' : 'Failed';
+        setPassStatus(status);
+
+        if (status === 'Passed') {
+          const auth = getAuth();
+          const user = auth.currentUser;
+          if (user) {
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
+            const userData = userDoc.data();
+            const badges = userData.badges || [];
+            if (!badges.includes(selectedSkill)) {
+              badges.push(selectedSkill);
+              await updateDoc(userDocRef, { badges });
+            }
+          }
+        }
+        setScore(userScore);
+        setShowScoreDialog(true);
+      } catch (error) {
+        console.error("Error saving responses and score:", error);
+      }
+    }
   };
 
   return (
@@ -114,7 +191,7 @@ const SkillAssessmentScreen = () => {
               key={level}
               title={level}
               handlePress={() => handleLevelSelect(level)}
-              containerStyles={{ backgroundColor: '#38B2AC' }}
+              containerStyles={styles.levelButton}
             />
           ))}
         </View>
@@ -128,7 +205,7 @@ const SkillAssessmentScreen = () => {
               key={skill}
               title={skill}
               handlePress={() => handleSkillSelect(skill)}
-              containerStyles={{ backgroundColor: '#38B2AC' }}
+              containerStyles={styles.skillButton}
             />
           ))}
         </View>
@@ -136,11 +213,9 @@ const SkillAssessmentScreen = () => {
 
       {selectedSkill && (
         <ScrollView style={styles.questionContainer}>
-          <Text style={styles.title}>
-            Skill Assessment for <Text style={styles.skillName}>{selectedSkill}</Text>
-          </Text>
+          <Text style={styles.title}>Skill Assessment for <Text style={styles.skillName}>{selectedSkill}</Text></Text>
           {loading ? (
-            <ActivityIndicator size="large" color="#38B2AC" />
+            <ActivityIndicator size="large" color="#38B2AC" style={styles.loadingIndicator} />
           ) : (
             <>
               {questions.length > 0 ? (
@@ -155,7 +230,8 @@ const SkillAssessmentScreen = () => {
                           <RadioButton
                             value={option}
                             status={answers[item.id] === option ? 'checked' : 'unchecked'}
-                            onPress={() => handleAnswerSelect(item.id, option)}
+                            onPress={() => handleAnswerChange(item.id, option)}
+                            color="#38B2AC"
                           />
                           <Text style={styles.radioButtonText}>{option}</Text>
                         </View>
@@ -164,72 +240,55 @@ const SkillAssessmentScreen = () => {
                   )}
                 />
               ) : (
-                <Text>No questions available.</Text>
+                <Text style={styles.noQuestionsText}>No questions available.</Text>
               )}
               <CustomButton
                 title="Submit"
-                handlePress={calculateScore}
+                handlePress={handleSubmit}
                 isLoading={loading}
-                containerStyles={{ opacity: Object.keys(answers).length === questions.length ? 1 : 0.5 }}
-                textStyles={{ color: '#FFF' }}
-                disabled={Object.keys(answers).length !== questions.length}
+                disabled={!isAllAnswered()}
+                containerStyles={styles.submitButton}
               />
             </>
           )}
         </ScrollView>
       )}
-      {/* Score Dialog */}
-      {showScoreDialog && (
-        <View style={styles.scoreDialogContainer}>
-          <View style={styles.scoreDialog}>
-            <Text style={styles.title}>{passStatus === 'Passed' ? 'Congratulations!' : 'Sorry!'}</Text>
-            <Text style={styles.scoreText}>You scored {score} out of {questions.length}</Text>
-            <CustomButton
-              title="OK"
-              handlePress={() => {
-                setShowScoreDialog(false);
-              }}
-              containerStyles={{ backgroundColor: '#007AFF' }}
-            />
-          </View>
+
+      <Modal visible={showScoreDialog} animationType="slide" transparent>
+        <View style={styles.dialog}>
+          <Text style={[styles.dialogTitle, { color: passStatus === 'Passed' ? 'teal' : 'red' }]}>
+            {passStatus === 'Passed' ? 'Congratulations!' : 'Try Again!'}
+          </Text>
+          <Text style={styles.dialogContent}>
+            You scored {score} out of {questions.length}
+          </Text>
+          <CustomButton title="Close" handlePress={handleDialogClose} containerStyles={styles.closeButton} />
         </View>
-      )}
+      </Modal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
-  skillName: { fontWeight: 'bold', color: '#38B2AC' },
-  questionContainer: { marginTop: 20 },
-  questionItem: { marginBottom: 20 },
-  questionText: { fontSize: 18, marginBottom: 10 },
-  radioButtonContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
-  radioButtonText: { marginLeft: 8 },
-  scoreDialogContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  scoreDialog: {
-    width: 300,
-    padding: 20,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.8,
-    shadowRadius: 2,
-    elevation: 5,
-  },
-  scoreText: {
-    fontSize: 16,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
+  container: { flex: 1, padding: 16, backgroundColor: '#FFF' },
+  title: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
+  skillName: { color: '#38B2AC', fontWeight: 'bold' },
+  levelSelection: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  levelButton: { marginBottom: 10 },
+  skillSelection: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  skillButton: { marginBottom: 10 },
+  questionContainer: { marginBottom: 20 },
+  questionItem: { marginBottom: 15 },
+  questionText: { fontSize: 18, fontWeight: '500', color: '#333' },
+  radioButtonContainer: { flexDirection: 'row', alignItems: 'center' },
+  radioButtonText: { marginLeft: 8, fontSize: 16 },
+  loadingIndicator: { marginVertical: 20 },
+  submitButton: { marginTop: 20 },
+  noQuestionsText: { textAlign: 'center', fontSize: 16, color: '#888', marginTop: 20 },
+  dialog: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+  dialogTitle: { fontSize: 24, fontWeight: '700', marginBottom: 10 },
+  dialogContent: { fontSize: 18, textAlign: 'center', marginBottom: 20 },
+  closeButton: { marginTop: 10 },
 });
 
 export default SkillAssessmentScreen;
