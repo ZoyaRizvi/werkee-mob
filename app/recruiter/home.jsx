@@ -198,11 +198,6 @@ const CardCustom = ({ data, openApplyModal }) => {
         <Text style={styles.jobExtraDetails}>Contract Type: {data.employmentType}</Text>
         <Text style={styles.jobExtraDetails}>Posted on: {formattedDate}</Text>
         <Text style={styles.jobDescription}>{data.description}</Text>
-        <CustomButton
-          title="Apply"
-          handlePress={() => openApplyModal(data)}
-          containerStyles={styles.applyButtonContainer}
-        />
       </View>
     </View>
   );

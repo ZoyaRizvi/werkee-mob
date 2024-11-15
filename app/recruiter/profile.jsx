@@ -150,9 +150,6 @@ const Profile = () => {
               <Button mode="outlined" style={styles.button} onPress={() => { }}>
                 Message
               </Button>
-              <Button mode="outlined" style={styles.button} onPress={() => { }}>
-                Skill Test
-              </Button>
             </View>
 
             <View style={styles.additionalInfo}>
@@ -165,20 +162,6 @@ const Profile = () => {
                 {profile.twitter && <IconButton icon="twitter" size={20} onPress={() => { }} />}
                 {profile.instagram && <IconButton icon="instagram" size={20} onPress={() => { }} />}
               </View>
-
-              <Text style={styles.infoLabel}>Skills:</Text>
-              <View style={styles.skillsContainer}>
-                {profile.skills.length > 0 ? (
-                  profile.skills.map((skill, index) => (
-                    <Chip key={index} style={styles.skillChip}>{skill}</Chip>
-                  ))
-                ) : (
-                  <Text style={styles.noSkillsText}>Please add your skills here</Text>
-                )}
-              </View>
-
-              <Text style={styles.infoLabel}>Badge:</Text>
-              <Text style={styles.badgeText}>{profile.badge || "🏆"}</Text>
             </View>
           </Card.Content>
         </Card>

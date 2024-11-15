@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, Dimensions, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import axios from 'axios';
@@ -10,6 +10,11 @@ const Councellor = ({ navigation }) => {
   const [messages, setMessages] = useState([]);
   const [generatingAnswer, setGeneratingAnswer] = useState(false);
   const [conversationStarted, setConversationStarted] = useState(false); // Track if conversation has started
+
+  // UseEffect to show the initial message
+  useEffect(() => {
+    setMessages([{ sender: 'bot', text: 'How may I assist you?' }]);
+  }, []);
 
   // Helper function to construct conversation history as a string
   const getConversationHistory = () => {
@@ -34,7 +39,7 @@ const Councellor = ({ navigation }) => {
     // If it's the first message, include the predefined prompt
     if (!conversationStarted) {
       const initialPrompt =
-        "You are a career counseling bot for a freelancing platform named Werky. Guide users based on their age and interests, and suggest them latest tools and technologies which are in trend nowadays for making money. Keep track of the conversation context and provide meaningful responses.";
+        "You are a career counseling bot for a freelancing platform named Werkee. Guide users based on their age and interests, and suggest them latest tools and technologies which are in trend nowadays for making money. Keep track of the conversation context and provide meaningful responses.";
       fullPrompt = `${initialPrompt}\n\n${fullPrompt}`;
       setConversationStarted(true); // Mark the conversation as started
     }
@@ -109,35 +114,6 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#f4f4f4',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  backButton: {
-    marginRight: 15,
-  },
-  profileInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
-  },
-  userName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  icons: {
-    flexDirection: 'row',
-  },
-  icon: {
-    marginLeft: 15,
-  },
   messageContainer: {
     flex: 1,
   },
@@ -200,5 +176,3 @@ const styles = StyleSheet.create({
 });
 
 export default Councellor;
-
-

@@ -96,7 +96,7 @@ const TabsLayout = () => {
             <TabIcon
               icon={icons.chat}
               color={color}
-              name="Create"
+              name="Chat"
               focused={focused}
             />
           ),
