@@ -89,7 +89,7 @@ const SignUp = () => {
           {!showForm ? (
             <>
               <Text style={styles.welcomeText}>
-                Welcome to Werky,{'\n'}Let’s kickstart your career journey together!
+                Welcome to Werkee,{'\n'}Let’s kickstart your career journey together!
               </Text>
 
               <Text style={styles.joinAsText}>
