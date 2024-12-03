@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient'; // For gradient backgroun
 import { icons } from "../../constants";
 import logo from "../../assets/images/werkee.jpg"
 import Profile from "./profile";
-import orders from "../screens/orders";
+import Orders from "../screens/Orders"
 
 // Drawer Navigator
 const Drawer = createDrawerNavigator();
@@ -147,7 +147,7 @@ const DrawerLayout = () => {
       {/* Drawer Screens */}
       <Drawer.Screen name="Tabs" component={TabsLayout} options={{ title: "Home" }} />
       <Drawer.Screen name="Profile" component={Profile} options={{ title: "Profile" }} />
-      <Drawer.Screen name="Orders" component={orders} options={{ title: "Orders" }} />
+      <Drawer.Screen name="Orders" component={Orders} options={{ title: "Orders" }} />
       
     </Drawer.Navigator>
   );
