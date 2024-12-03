@@ -3,9 +3,10 @@ import { Tabs } from "expo-router";
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawer"; // Import Drawer components
 import { LinearGradient } from 'expo-linear-gradient'; // For gradient background
 import { icons } from "../../constants";
+import Councellor from "../screens/councellor";
+import SkillAssessmentScreen from "../screens/SkillAssessmentScreen3";
 import logo from "../../assets/images/werkee.jpg"
 import Profile from "./profile";
-import orders from "../screens/orders";
 
 // Drawer Navigator
 const Drawer = createDrawerNavigator();
@@ -147,7 +148,6 @@ const DrawerLayout = () => {
       {/* Drawer Screens */}
       <Drawer.Screen name="Tabs" component={TabsLayout} options={{ title: "Home" }} />
       <Drawer.Screen name="Profile" component={Profile} options={{ title: "Profile" }} />
-      <Drawer.Screen name="Orders" component={orders} options={{ title: "Orders" }} />
       
     </Drawer.Navigator>
   );
