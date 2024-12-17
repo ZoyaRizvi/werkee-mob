@@ -197,6 +197,30 @@ const Councellor = ({ navigation }) => {
               {text: "I apologize, but I am designed to provide information and guidance related to technology, programming, job trends, and skills relevant to remote work.\n"},
             ],
           },
+          {
+            role: "user",
+            parts: [
+              {text: "do you know the president of pakistan?"},
+            ],
+          },
+          {
+            role: "model",
+            parts: [
+              {text: "I apologize, but I don't have access to real-time information on trending dramas. My knowledge base focuses on technology, programming, and related career fields."},
+            ],
+          },
+          {
+            role: "user",
+            parts: [
+              {text: "what color would suit me best"},
+            ],
+          },
+          {
+            role: "model",
+            parts: [
+              {text: "I'm sorry, but I cannot advise you on what colors would suit you best. My expertise lies in technology and career-related topics. \n"},
+            ],
+          },
         ];
         
         fullPrompt = `${initialPrompt}\n\n${fullPrompt}`;
