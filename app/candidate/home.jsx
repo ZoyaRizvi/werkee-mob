@@ -10,10 +10,16 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  TouchableOpacity,
   Button,
 } from 'react-native';
-import { collection, collectionGroup, getDocs, addDoc, doc } from "firebase/firestore";
+import * as DocumentPicker from 'expo-document-picker';
+import {
+  collection,
+  collectionGroup,
+  getDocs,
+  addDoc,
+  doc,
+} from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, storage, auth } from "../../firebase/firebase";
@@ -62,27 +68,44 @@ export function Home() {
   };
 
   const handleFileChange = async () => {
-    // Code for selecting and uploading a file goes here
-    // This is a placeholder; React Native file picker libraries can help
-    // e.g., using react-native-document-picker to pick files
-    // Then update formData with resume file information
-  };
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*", // Accept all file types
+        copyToCacheDirectory: true,
+      });
+  
+      console.log("Document Picker Result:", result);
+  
+      if (result.canceled === false && result.assets?.[0]?.uri) {
+        const selectedFile = result.assets[0];
+        setFormData((prevData) => ({ ...prevData, resume: selectedFile }));
+        console.log("File successfully selected:", selectedFile);
+      } else {
+        Alert.alert("File selection was canceled or invalid.");
+      }
+    } catch (err) {
+      console.error("Error picking file:", err);
+      Alert.alert("An error occurred while picking the file.");
+    }
+  };  
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.coverLetter || !formData.resume) {
-      Alert.alert("All fields are required!");
+    if (!formData.name || !formData.coverLetter || !formData.resume?.uri) {
+      Alert.alert("All fields are required, and resume must be selected!");
       return;
     }
-
+  
     try {
+      // Fetch the file as a blob
+      const response = await fetch(formData.resume.uri);
+      const blob = await response.blob();
+  
       const resumeRef = ref(storage, `resumes/${formData.resume.name}`);
-      await uploadBytes(resumeRef, formData.resume);
+      await uploadBytes(resumeRef, blob);
+  
       const resumeUrl = await getDownloadURL(resumeRef);
-
-      const recruiterDocRef = doc(db, 'JobResponses', selectedJob.recruiter_id);
-      const applicationsCollectionRef = collection(recruiterDocRef, 'applications');
-
-      await addDoc(applicationsCollectionRef, {
+  
+      await addDoc(collection(db, "applications"), {
         ...formData,
         email: currentUserEmail,
         resume: resumeUrl,
@@ -90,15 +113,15 @@ export function Home() {
         jobTitle: selectedJob.title,
         timestamp: new Date(),
       });
-
+  
       Alert.alert("Application submitted successfully");
       setIsModalOpen(false);
       setFormData({ name: '', resume: null, coverLetter: '' });
     } catch (e) {
-      console.error("Error adding document: ", e);
+      console.error("Error uploading document:", e);
       Alert.alert("Error submitting application");
     }
-  };
+  };  
 
   const openApplyModal = (job) => {
     setSelectedJob(job);
@@ -157,7 +180,6 @@ export function Home() {
               value={formData.coverLetter}
               onChangeText={(text) => handleInputChange('coverLetter', text)}
             />
-            {/* Placeholder for File Picker */}
             <Button title="Select Resume" onPress={handleFileChange} />
             <View style={styles.buttonContainer}>
               <Button title="Submit" onPress={handleSubmit} color="#009B81" />
