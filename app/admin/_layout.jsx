@@ -1,19 +1,18 @@
 import { Image, Text, View } from "react-native";
 import { Tabs } from "expo-router";
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawer"; // Import Drawer components
-import { LinearGradient } from 'expo-linear-gradient'; 
+import { LinearGradient } from 'expo-linear-gradient'; // For gradient background
 import { icons } from "../../constants";
-import Councellor from "../screens/councellor";
-import SkillAssessmentScreen from "../screens/SkillAssessmentScreen3";
 import orders from "../screens/orders";
 import logo from "../../assets/images/werkee.jpg"
+import Profile from "./profile";
 
 const Drawer = createDrawerNavigator();
 
 const CustomDrawerContent = (props) => {
   return (
     <LinearGradient
-    colors={['#0a9ea6', '#4DB6AC']} 
+    colors={['#0a9ea6', '#4DB6AC']}
       style={{ flex: 1 }}
     >
       <DrawerContentScrollView {...props}>
@@ -52,7 +51,6 @@ const TabIcon = ({ icon, color, name, focused }) => {
   );
 };
 
-// Tabs Component
 const TabsLayout = () => {
   return (
     <Tabs
@@ -120,14 +118,14 @@ const TabsLayout = () => {
 const DrawerLayout = () => {
   return (
     <Drawer.Navigator
-      drawerContent={(props) => <CustomDrawerContent {...props} />}
+      drawerContent={(props) => <CustomDrawerContent {...props} />} 
       screenOptions={{
         drawerStyle: {
-          backgroundColor: "transparent", 
+          backgroundColor: "transparent",
           width: 240,
         },
         drawerActiveTintColor: "#FFF",
-        drawerInactiveTintColor: "#E0E0E0",
+        drawerInactiveTintColor: "#E0E0E0", 
         drawerLabelStyle: {
           fontSize: 16,
           fontWeight: "bold",
@@ -141,8 +139,7 @@ const DrawerLayout = () => {
       }}
     >
       <Drawer.Screen name="Tabs" component={TabsLayout} options={{ title: "Home" }} />
-      <Drawer.Screen name="Councellor" component={Councellor} options={{ title: "Councellor" }} />
-      <Drawer.Screen name="SkillAssessment" component={SkillAssessmentScreen} options={{ title: "SkillAssessment" }} />
+      <Drawer.Screen name="Profile" component={Profile} options={{ title: "Profile" }} />
       <Drawer.Screen name="orders" component={orders} options={{ title: "Orders" }} />
     </Drawer.Navigator>
   );
@@ -150,5 +147,3 @@ const DrawerLayout = () => {
 
 
 export default DrawerLayout;
-
-

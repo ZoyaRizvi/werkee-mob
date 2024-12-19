@@ -36,6 +36,7 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="candidate" options={{ headerShown: false }} />
         <Stack.Screen name="recruiter" options={{ headerShown: false }} />
+        <Stack.Screen name="admin" options={{ headerShown: false }} />
       </Stack>
     </PaperProvider>
   );

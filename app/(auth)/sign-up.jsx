@@ -49,14 +49,11 @@ const SignUp = () => {
     setSubmitting(true);
 
     try {
-      // Create user with email and password in Firebase
       const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
       const user = userCredential.user;
 
-      // Update profile with display name
       await updateProfile(user, { displayName: form.name });
 
-      // Store user data in Firestore
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         email: user.email,

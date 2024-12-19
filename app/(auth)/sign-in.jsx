@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, Image, Alert, TouchableOpacity } from "react-native";
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import CustomButton from "../../components/CustomButton";
 import FormField from "../../components/FormField";
 import { images } from "../../constants";
@@ -24,15 +24,13 @@ export function SignIn() {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Fetch the user's role from Firestore
-        const userDocRef = doc(db, "users", user.uid); // Assuming user roles are stored in Firestore under a "users" collection
+        const userDocRef = doc(db, "users", user.uid); 
         const userDoc = await getDoc(userDocRef);
 
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          const userRole = userData.role; // Assuming 'role' field contains the role
+          const userRole = userData.role; 
 
-          // Redirect based on the user's role
           if (userRole === 'admin') {
             router.push("/admin/home");
           } else if (userRole === 'candidate') {
