@@ -146,15 +146,6 @@ const Profile = () => {
                 </Text>
               )}
             </Paragraph>
-            <View style={styles.actionButtons}>
-              <Button
-                mode="outlined"
-                style={styles.button}
-                onPress={() => route.push('../screens/SkillAssessmentScreen')}
-              >
-                Skill Assessment
-              </Button>
-            </View>
 
             <View style={styles.additionalInfo}>
               <Text style={styles.infoLabel}>Location:</Text>
