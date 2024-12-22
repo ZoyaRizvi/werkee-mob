@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect } from "react";
 import { auth } from "../../firebase/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, query, where, getDocs  } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../firebase/firebase";
 
 const AuthContext = React.createContext();
@@ -20,43 +20,49 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, initializeUser);
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
   const fetchUser = async (u) => {
-    const q = query(collection(db, "users"), where("email", "==", u.email))
+    try {
+      const q = query(collection(db, "users"), where("email", "==", u.email));
+      const querySnapshot = await getDocs(q);
 
-    const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const userData = querySnapshot.docs[0].data();
+        setDbUser(userData);
+        localStorage.setItem("user", JSON.stringify(userData));
+      } else {
+        console.error("User not found in Firestore.");
+      }
+    } catch (error) {
+      console.error("Error fetching Firestore user:", error);
+    }
+  };
 
-    querySnapshot.forEach((doc) => {
-      setDbUser(doc.data())
-      localStorage.setItem("user", JSON.stringify(doc.data()))
-    });
-  }
-  
   async function initializeUser(user) {
     if (user) {
-      // localStorage.setItem("user", JSON.stringify(user));
+      // Check localStorage for user data first
+      const localUser = localStorage.getItem("user");
+      if (localUser) {
+        setDbUser(JSON.parse(localUser));
+      } else {
+        await fetchUser(user);
+      }
 
-      fetchUser(user)
-      setCurrentUser({ ...user });
+      setCurrentUser(user);
 
-      // check if provider is email and password login
+      // Check if provider is email and password login
       const isEmail = user.providerData.some(
         (provider) => provider.providerId === "password"
       );
       setIsEmailUser(isEmail);
 
-      // check if the auth provider is google or not
-    //   const isGoogle = user.providerData.some(
-    //     (provider) => provider.providerId === GoogleAuthProvider.PROVIDER_ID
-    //   );
-    //   setIsGoogleUser(isGoogle);
-
       setUserLoggedIn(true);
     } else {
       setCurrentUser(null);
       setUserLoggedIn(false);
+      setDbUser(null);
     }
 
     setLoading(false);
@@ -68,7 +74,7 @@ export function AuthProvider({ children }) {
     isGoogleUser,
     currentUser,
     setCurrentUser,
-    dbUser
+    dbUser,
   };
 
   return (
