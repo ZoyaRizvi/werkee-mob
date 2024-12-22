@@ -142,7 +142,7 @@ const DrawerLayout = () => {
     >
       <Drawer.Screen name="Tabs" component={TabsLayout} options={{ title: "Home" }} />
       <Drawer.Screen name="Freelancers" component={Freelancers} options={{ title: "Freelancers" }} />
-      <Drawer.Screen name="Recruiters" component={Freelancers} options={{ title: "Recruiters" }} />
+      <Drawer.Screen name="Recruiters" component={Recruiters} options={{ title: "Recruiters" }} />
     </Drawer.Navigator>
   );
 };
