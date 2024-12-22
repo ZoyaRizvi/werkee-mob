@@ -29,7 +29,7 @@ export function Home() {
 
   const fetchPost = async () => {
     try {
-      const querySnapshot = await getDocs(collectionGroup(db, "jobs"));
+      const querySnapshot = await getDocs(collectionGroup(db, "projects"));
       const newData = querySnapshot.docs.map((doc) => ({
         ...doc.data(),
         id: doc.id,
@@ -114,12 +114,7 @@ export function Home() {
           <Text style={styles.bannerSubText}>
             Endless opportunities are just around the corner—dive in and grab yours.
           </Text>
-          <TouchableOpacity
-            style={styles.postButton}
-            onPress={() => setIsModalOpen(true)}
-          >
-            <Text style={styles.postButtonText}>Post a Project</Text>
-          </TouchableOpacity>
+        
         </View>
 
         {isLoading ? (
@@ -189,15 +184,14 @@ const CardCustom = ({ data, openApplyModal }) => {
 
   return (
     <View style={styles.jobItem}>
-      <Image source={{ uri: data.companyLogo }} style={styles.jobImage} />
+      <Image source={{ uri: data.profile_pic}} style={styles.jobImage} />
       <View style={styles.jobDetailsContainer}>
-        <Text style={styles.jobTitle}>{data.title}</Text>
-        <Text style={styles.jobCompany}>{data.companyName}</Text>
-        <Text style={styles.jobExtraDetails}>Requirements: {data.Requirements}</Text>
-        <Text style={styles.jobExtraDetails}>Location: {data.jobLocation}</Text>
-        <Text style={styles.jobExtraDetails}>Contract Type: {data.employmentType}</Text>
-        <Text style={styles.jobExtraDetails}>Posted on: {formattedDate}</Text>
-        <Text style={styles.jobDescription}>{data.description}</Text>
+        <Text style={styles.jobTitle}>{data.user_name}</Text>
+        <Text style={styles.title}>Title: {data.title}</Text>
+    <Image source={{ uri: data.img }} style={styles.image} alt="Content" />
+    <Text style={styles.description}>{data.description}</Text>
+    <Text style={styles.tag}>Tag: {data.tag}</Text>
+  
       </View>
     </View>
   );
@@ -358,6 +352,34 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '500',
+    marginBottom: 8,
+    paddingLeft: 12,
+  },
+  image: {
+    width: 160, // equivalent to "w-80"
+    height: 100, // equivalent to "h-40"
+    resizeMode: 'cover', // equivalent to "object-cover"
+    marginLeft: 16,
+    marginTop: 16,
+    borderRadius: 8,
+  },
+  description: {
+    fontSize: 14,
+    color: 'rgba(0, 0, 0, 0.7)', // assuming "text-primary/70" is a dark shade with 70% opacity
+    paddingTop: 12,
+    paddingLeft: 12,
+  },
+  tag: {
+    fontSize: 16,
+    color: '#007AFF', // replace with the appropriate "text-primary" color
+    fontWeight: '600',
+    marginTop: 8,
+    marginBottom: 4,
+    paddingLeft: 12,
   },
 });
 
