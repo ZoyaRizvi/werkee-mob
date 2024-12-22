@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import {
   FlatList,
   TextInput,
-  Button,
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
+  Modal,
 } from "react-native";
+import Icon from "react-native-vector-icons/Ionicons";
 import {
   collection,
   query,
@@ -18,8 +19,6 @@ import {
   addDoc,
   Timestamp,
 } from "firebase/firestore";
-import { PlusIcon, MagnifyingGlassIcon } from "@heroicons/react/24/solid";
-import { useAuth } from "../../context/authContext/";
 import { db, auth } from "../../firebase/firebase";
 
 const Chat = () => {
@@ -29,20 +28,45 @@ const Chat = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [messages1, setMessages1] = useState([]);
-  const [messages2, setMessages2] = useState([]);
-  const [messages3, setMessages3] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [recruiter, setRecruiter] = useState("");
   const [newMessagePost, setNewMessagePost] = useState("");
-  const [recruiter, setRecruiter] = useState(null);
-  const [jobTitle, setJobTitle] = useState(null);
-
   const currentUserEmail = auth.currentUser?.email;
 
-  if (!currentUserEmail) {
-    return <Text style={styles.loadingText}>Loading user data...</Text>;
-  }
+  const handleModalToggle = () => setModalVisible(!modalVisible);
 
-  // Fetch user chats
+  const handleNewSendMessage = async () => {
+    if (recruiter.trim() && newMessagePost.trim()) {
+      await addDoc(collection(db, "messages"), {
+        from: currentUserEmail,
+        to: recruiter,
+        text: newMessagePost,
+        timestamp: Timestamp.now(),
+      });
+
+      // Update the chat list immediately
+      if (!uniqueChatList.includes(recruiter)) {
+        setUniqueChatList((prevList) => Array.from(new Set([...prevList, recruiter])));
+      }
+
+      setRecruiter("");
+      setNewMessagePost("");
+      setModalVisible(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (newMessage.trim()) {
+      await addDoc(collection(db, "messages"), {
+        from: currentUserEmail,
+        to: selectedChat.email,
+        text: newMessage,
+        timestamp: Timestamp.now(),
+      });
+      setNewMessage("");
+    }
+  };
+
   useEffect(() => {
     if (!currentUserEmail) return;
 
@@ -66,14 +90,12 @@ const Chat = () => {
     return () => unsubscribe();
   }, [currentUserEmail]);
 
-  // Fetch unique users
   useEffect(() => {
     if (uniqueChatList.length === 0) return;
 
     const q = query(
       collection(db, "users"),
-      where("email", "in", uniqueChatList),
-      orderBy("createdAt")
+      where("email", "in", uniqueChatList)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -83,79 +105,22 @@ const Chat = () => {
     return () => unsubscribe();
   }, [uniqueChatList]);
 
-  // Fetch messages between the selected chat and current user
   useEffect(() => {
     if (!selectedChat) return;
 
-    const q1 = query(
+    const q = query(
       collection(db, "messages"),
-      where("from", "==", currentUserEmail),
-      where("to", "==", selectedChat.email),
+      where("from", "in", [currentUserEmail, selectedChat.email]),
+      where("to", "in", [currentUserEmail, selectedChat.email]),
       orderBy("timestamp")
     );
 
-    const q2 = query(
-      collection(db, "messages"),
-      where("from", "==", selectedChat.email),
-      where("to", "==", currentUserEmail),
-      orderBy("timestamp")
-    );
-
-    const unsubscribe1 = onSnapshot(q1, (snapshot) => {
-      setMessages1(snapshot.docs.map((doc) => doc.data()));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setMessages(snapshot.docs.map((doc) => doc.data()));
     });
 
-    const unsubscribe2 = onSnapshot(q2, (snapshot) => {
-      setMessages2(snapshot.docs.map((doc) => doc.data()));
-    });
-
-    return () => {
-      unsubscribe1();
-      unsubscribe2();
-    };
+    return () => unsubscribe();
   }, [selectedChat, currentUserEmail]);
-
-  // Combine and sort messages
-  useEffect(() => {
-    const combined = [...messages1, ...messages2];
-    combined.sort((a, b) => a.timestamp - b.timestamp);
-    setMessages3(combined);
-  }, [messages1, messages2]);
-
-  const handleSendMessage = async () => {
-    if (newMessage.trim()) {
-      await addDoc(collection(db, "messages"), {
-        from: currentUserEmail,
-        to: selectedChat.email,
-        users: [currentUserEmail, selectedChat.email],
-        text: newMessage,
-        timestamp: Timestamp.now(),
-      });
-      setNewMessage("");
-    }
-  };
-
-  const handleNewSendMessage = async () => {
-    if (newMessagePost.trim()) {
-      await addDoc(collection(db, "messages"), {
-        from: currentUserEmail,
-        to: recruiter,
-        users: [currentUserEmail, recruiter],
-        text: `New message for job: ${jobTitle} from ${currentUserEmail}`,
-        timestamp: Timestamp.now(),
-      });
-
-      await addDoc(collection(db, "messages"), {
-        from: currentUserEmail,
-        to: recruiter,
-        users: [currentUserEmail, recruiter],
-        text: newMessagePost,
-        timestamp: Timestamp.now(),
-      });
-
-      setNewMessagePost("");
-    }
-  };
 
   const filteredChats = uniqueUsersList.filter((chat) =>
     chat.displayName.toLowerCase().includes(searchQuery.toLowerCase())
@@ -165,12 +130,17 @@ const Chat = () => {
     <View style={styles.container}>
       {!selectedChat ? (
         <>
-          <TextInput
-            placeholder="Search chats"
-            value={searchQuery}
-            onChangeText={(text) => setSearchQuery(text)}
-            style={styles.searchInput}
-          />
+          <View style={styles.searchContainer}>
+            <TextInput
+              placeholder="Search chats"
+              value={searchQuery}
+              onChangeText={(text) => setSearchQuery(text)}
+              style={styles.searchInput}
+            />
+            <TouchableOpacity style={styles.iconButton} onPress={handleModalToggle}>
+              <Icon name="add" size={24} color="#4caf50" />
+            </TouchableOpacity>
+          </View>
           <FlatList
             data={filteredChats}
             keyExtractor={(item) => item.email}
@@ -183,11 +153,50 @@ const Chat = () => {
               </TouchableOpacity>
             )}
           />
+          <Modal
+            visible={modalVisible}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={handleModalToggle}
+          >
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Start a new conversation</Text>
+                <TextInput
+                  placeholder="Recruiter's email"
+                  value={recruiter}
+                  onChangeText={setRecruiter}
+                  style={styles.input}
+                />
+                <TextInput
+                  placeholder="Type your message"
+                  value={newMessagePost}
+                  onChangeText={setNewMessagePost}
+                  style={styles.input}
+                  multiline
+                />
+                <View style={styles.modalButtons}>
+                <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={handleModalToggle}
+                  >
+                    <Text style={styles.buttonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.modalButton}
+                    onPress={handleNewSendMessage}
+                  >
+                    <Text style={styles.buttonText}>Send</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
         </>
       ) : (
         <>
           <FlatList
-            data={messages3}
+            data={messages}
             keyExtractor={(item, index) => index.toString()}
             contentContainerStyle={styles.messagesContainer}
             renderItem={({ item }) => (
@@ -198,7 +207,13 @@ const Chat = () => {
                     : styles.receivedMessage
                 }
               >
-                <Text style={item.from === currentUserEmail ? styles.sentMessageText : styles.receivedMessageText}>
+                <Text
+                  style={
+                    item.from === currentUserEmail
+                      ? styles.sentMessageText
+                      : styles.receivedMessageText
+                  }
+                >
                   {item.text}
                 </Text>
               </View>
@@ -233,117 +248,187 @@ const Chat = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#f9fafb",
   },
-  loadingText: {
-    textAlign: "center",
-    marginTop: 20,
-    fontSize: 16,
-    color: "#555",
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 15,
+    marginTop: 15,
+    marginBottom: 10,
   },
   searchInput: {
-    margin: 10,
+    flex: 1,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#e5e7eb",
     borderRadius: 25,
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff",
     fontSize: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  iconButton: {
+    marginLeft: 10,
+    padding: 10,
+    borderRadius: 50,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   chatItem: {
     padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    marginHorizontal: 15,
+    marginBottom: 10,
+    borderRadius: 10,
     backgroundColor: "#ffffff",
-    borderRadius: 8,
-    marginHorizontal: 10,
-    marginVertical: 5,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 2,
   },
   chatText: {
     fontSize: 16,
-    color: "#333",
+    color: "#1f2937",
+    fontWeight: "600",
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContent: {
+    width: "90%",
+    padding: 20,
+    backgroundColor: "#ffffff",
+    borderRadius: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#111827",
+    marginBottom: 15,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: "#f9fafb",
+    fontSize: 16,
+    marginBottom: 15,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  modalButton: {
+    flex: 1,
+    padding: 12,
+    marginHorizontal: 5,
+    borderRadius: 8,
+    backgroundColor: "#10b981",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cancelButton: {
+    backgroundColor: "#ef4444",
+  },
+  buttonText: {
+    color: "#ffffff",
+    fontWeight: "bold",
+    fontSize: 16,
   },
   messagesContainer: {
-    padding: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
   },
   sentMessage: {
     alignSelf: "flex-end",
-    backgroundColor: "#4caf50",
-    padding: 12,
-    borderRadius: 20,
+    backgroundColor: "#10b981",
+    padding: 10,
+    borderRadius: 10,
     marginVertical: 5,
     maxWidth: "75%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sentMessageText: {
-    color: "#fff",
-    fontSize: 15,
   },
   receivedMessage: {
     alignSelf: "flex-start",
-    backgroundColor: "#2196f3",
-    padding: 12,
-    borderRadius: 20,
+    backgroundColor: "#e5e7eb",
+    padding: 10,
+    borderRadius: 10,
     marginVertical: 5,
     maxWidth: "75%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  },
+  sentMessageText: {
+    color: "#ffffff",
+    fontSize: 16,
   },
   receivedMessageText: {
-    color: "#fff",
-    fontSize: 15,
+    color: "#1f2937",
+    fontSize: 16,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#ddd",
+    margin: 15,
     backgroundColor: "#ffffff",
+    borderRadius: 25,
+    paddingHorizontal: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   messageInput: {
     flex: 1,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 25,
-    backgroundColor: "#f5f5f5",
     fontSize: 16,
+    padding: 10,
+    borderRadius: 25,
   },
   sendButton: {
-    marginLeft: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: "#4caf50",
+    padding: 10,
+    backgroundColor: "#10b981",
     borderRadius: 25,
-    elevation: 3,
+    alignItems: "center",
+    justifyContent: "center",
   },
   sendButtonText: {
-    color: "#fff",
-    fontSize: 16,
+    color: "#ffffff",
     fontWeight: "bold",
   },
   backButton: {
-    padding: 15,
-    backgroundColor: "#f44336",
-    alignItems: "center",
+    alignSelf: "center",
+    padding: 10,
+    backgroundColor: "#6b7280",
     borderRadius: 25,
-    margin: 10,
-    elevation: 3,
+    marginTop: 10,
   },
   backButtonText: {
-    color: "#fff",
-    fontSize: 16,
+    color: "#ffffff",
     fontWeight: "bold",
+    fontSize: 16,
   },
-});
+}); 
 
 export default Chat;
