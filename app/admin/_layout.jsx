@@ -6,6 +6,7 @@ import { icons } from "../../constants";
 import orders from "../screens/orders";
 import logo from "../../assets/images/werkee.jpg"
 import Profile from "./profile";
+import { LogOut } from '../(auth)/logout'; 
 
 const Drawer = createDrawerNavigator();
 
@@ -141,6 +142,7 @@ const DrawerLayout = () => {
       <Drawer.Screen name="Tabs" component={TabsLayout} options={{ title: "Home" }} />
       <Drawer.Screen name="Profile" component={Profile} options={{ title: "Profile" }} />
       <Drawer.Screen name="orders" component={orders} options={{ title: "Orders" }} />
+      <Drawer.Screen name="LogOut" component={LogOut} options={{ title: "Log Out" }} />
     </Drawer.Navigator>
   );
 };
