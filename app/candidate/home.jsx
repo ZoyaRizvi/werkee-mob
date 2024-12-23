@@ -11,7 +11,9 @@ import {
   Alert,
   Modal,
   Button,
+  TouchableOpacity ,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons'; // for icons
 import * as DocumentPicker from 'expo-document-picker';
 import {
   collection,
@@ -31,9 +33,17 @@ export function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ name: '', resume: null, coverLetter: '' });
+  const [formData, setFormData] = useState({
+    title: '',
+    deliveryTime: '',
+    revisions: '',
+    price: '',
+    service: '',
+    description: '',
+  });
   const [currentUserEmail, setCurrentUserEmail] = useState('');
   const [selectedJob, setSelectedJob] = useState(null);
+  const [errors, setErrors] = useState({});
 
   const fetchPost = async () => {
     try {
@@ -66,62 +76,60 @@ export function Home() {
   const handleInputChange = (name, value) => {
     setFormData((prevData) => ({ ...prevData, [name]: value }));
   };
+  const handleOfferSubmit = async () => {
+    const newErrors = {};
 
-  const handleFileChange = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: "*/*", // Accept all file types
-        copyToCacheDirectory: true,
-      });
-  
-      console.log("Document Picker Result:", result);
-  
-      if (result.canceled === false && result.assets?.[0]?.uri) {
-        const selectedFile = result.assets[0];
-        setFormData((prevData) => ({ ...prevData, resume: selectedFile }));
-        console.log("File successfully selected:", selectedFile);
-      } else {
-        Alert.alert("File selection was canceled or invalid.");
-      }
-    } catch (err) {
-      console.error("Error picking file:", err);
-      Alert.alert("An error occurred while picking the file.");
+    if (!formData.title) {
+      newErrors.title = 'Title is required';
     }
-  };  
+    if (!formData.deliveryTime) {
+      newErrors.deliveryTime = 'Delivery time is required';
+    }
+    if (!formData.revisions) {
+      newErrors.revisions = 'Revisions are required';
+    }
+    if (!formData.price) {
+      newErrors.price = 'Price is required';
+    }
+    if (!formData.service) {
+      newErrors.service = 'Service is required';
+    }
+    if (!formData.description) {
+      newErrors.description = 'Description is required';
+    }
 
-  const handleSubmit = async () => {
-    if (!formData.name || !formData.coverLetter || !formData.resume?.uri) {
-      Alert.alert("All fields are required, and resume must be selected!");
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
-  
+
+    const orderNumber = Math.floor(100000 + Math.random() * 90000);
+    const offerId = `offer_${orderNumber}`;
+
     try {
-      // Fetch the file as a blob
-      const response = await fetch(formData.resume.uri);
-      const blob = await response.blob();
-  
-      const resumeRef = ref(storage, `resumes/${formData.resume.name}`);
-      await uploadBytes(resumeRef, blob);
-  
-      const resumeUrl = await getDownloadURL(resumeRef);
-  
-      await addDoc(collection(db, "applications"), {
-        ...formData,
-        email: currentUserEmail,
-        resume: resumeUrl,
-        jobId: selectedJob.id,
-        jobTitle: selectedJob.title,
+      const offerData = {
+        title: formData.title,
+        deliveryTime: formData.deliveryTime,
+        revisions: formData.revisions,
+        price: formData.price,
+        service: formData.service,
+        description: formData.description,
+        RecruiterEmail: recruiter_email,
+        FreelancerEmail: currentUserEmail,
         timestamp: new Date(),
-      });
-  
-      Alert.alert("Application submitted successfully");
+        orderNumber: offerId,
+        status: 'Pending',
+      };
+
+      const offersCollectionRef = doc(db, "Offers", offerId);
+      await setDoc(offersCollectionRef, offerData);
+
+      console.log('Offer submitted successfully');
       setIsModalOpen(false);
-      setFormData({ name: '', resume: null, coverLetter: '' });
     } catch (e) {
-      console.error("Error uploading document:", e);
-      Alert.alert("Error submitting application");
+      console.error('Error adding document: ', e);
     }
-  };  
+  };
 
   const openApplyModal = (job) => {
     setSelectedJob(job);
@@ -159,32 +167,73 @@ export function Home() {
         )}
       </ScrollView>
 
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isModalOpen}
-        onRequestClose={() => setIsModalOpen(false)}
-      >
+      <Modal visible={isModalOpen} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Apply for {selectedJob?.title}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Name"
-              value={formData.name}
-              onChangeText={(text) => handleInputChange('name', text)}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Cover Letter"
-              value={formData.coverLetter}
-              onChangeText={(text) => handleInputChange('coverLetter', text)}
-            />
-            <Button title="Select Resume" onPress={handleFileChange} />
-            <View style={styles.buttonContainer}>
-              <Button title="Submit" onPress={handleSubmit} color="#009B81" />
-              <Button title="Cancel" onPress={() => setIsModalOpen(false)} color="#ff0000" />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Make an Offer</Text>
+              <TouchableOpacity onPress={() => setIsModalOpen(false)}>
+                <Ionicons name="close-circle" size={24} color="black" />
+              </TouchableOpacity>
             </View>
+
+            <ScrollView>
+              <TextInput
+                style={styles.input}
+                placeholder="Title"
+                value={formData.title}
+                onChangeText={(text) => handleInputChange({ target: { name: 'title', value: text } })}
+              />
+              {errors.title && <Text style={styles.errorText}>{errors.title}</Text>}
+
+              <TextInput
+                style={styles.input}
+                placeholder="Delivery Time (Days)"
+                keyboardType="numeric"
+                value={formData.deliveryTime}
+                onChangeText={(text) => handleInputChange({ target: { name: 'deliveryTime', value: text } })}
+              />
+              {errors.deliveryTime && <Text style={styles.errorText}>{errors.deliveryTime}</Text>}
+
+              <TextInput
+                style={styles.input}
+                placeholder="Revisions"
+                keyboardType="numeric"
+                value={formData.revisions}
+                onChangeText={(text) => handleInputChange({ target: { name: 'revisions', value: text } })}
+              />
+              {errors.revisions && <Text style={styles.errorText}>{errors.revisions}</Text>}
+
+              <TextInput
+                style={styles.input}
+                placeholder="Price"
+                keyboardType="numeric"
+                value={formData.price}
+                onChangeText={(text) => handleInputChange({ target: { name: 'price', value: text } })}
+              />
+              {errors.price && <Text style={styles.errorText}>{errors.price}</Text>}
+
+              <TextInput
+                style={styles.input}
+                placeholder="Service"
+                value={formData.service}
+                onChangeText={(text) => handleInputChange({ target: { name: 'service', value: text } })}
+              />
+              {errors.service && <Text style={styles.errorText}>{errors.service}</Text>}
+
+              <TextInput
+                style={styles.input}
+                placeholder="Description"
+                multiline
+                value={formData.description}
+                onChangeText={(text) => handleInputChange({ target: { name: 'description', value: text } })}
+              />
+              {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
+
+              <TouchableOpacity style={styles.submitButton} onPress={handleOfferSubmit}>
+                <Text style={styles.submitButtonText}>Submit Offer</Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -211,7 +260,7 @@ const CardCustom = ({ data, openApplyModal }) => {
         <Text style={styles.jobExtraDetails}>Posted on: {formattedDate}</Text>
         <Text style={styles.jobDescription}>{data.description}</Text>
         <CustomButton
-          title="Apply"
+          title="Make an Offer"
           handlePress={() => openApplyModal(data)}
           containerStyles={styles.applyButtonContainer}
         />

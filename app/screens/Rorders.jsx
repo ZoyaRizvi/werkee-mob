@@ -23,7 +23,7 @@ import {
 import { db , auth } from "../../firebase/firebase";
 
 
-export default function COrders() {
+export default function ROrders() {
   const dbUser = auth.currentUser;
   const [currentTab, setCurrentTab] = useState("All Offers");
   const [offersData, setOffersData] = useState([]);
@@ -39,7 +39,7 @@ export default function COrders() {
 
   const fetchOffers = async () => {
     const offersRef = collection(db, "Offers");
-    const q = query(offersRef, where("FreelancerEmail", "==", dbUser.email));
+    const q = query(offersRef, where("RecruiterEmail", "==", dbUser.email));
 
     const querySnapshot = await getDocs(q);
     const offers = querySnapshot.docs.map((doc) => ({
@@ -52,7 +52,7 @@ export default function COrders() {
 
   const fetchAcceptedOrders = async () => {
     const ordersRef = collection(db, "orders");
-    const q = query(ordersRef, where("FreelancerEmail", "==", dbUser.email));
+    const q = query(ordersRef, where("RecruiterEmail", "==", dbUser.email));
 
     const querySnapshot = await getDocs(q);
     const orders = querySnapshot.docs.map((doc) => ({
@@ -125,10 +125,16 @@ export default function COrders() {
       <Text>Price: ${item.price}</Text>
       <View style={styles.actionRow}>
         <TouchableOpacity
+          style={[styles.button, styles.acceptButton]}
+          onPress={() => acceptOffer(item.id)}
+        >
+          <Text style={styles.buttonText}>Accept</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
           style={[styles.button, styles.declineButton]}
           onPress={() => declineOffer(item.id)}
         >
-          <Text style={styles.buttonText}>Remove</Text>
+          <Text style={styles.buttonText}>Decline</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -137,7 +143,7 @@ export default function COrders() {
   const renderOrder = ({ item }) => (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>{item.title}</Text>
-      <Text>Freelancer's Email: {item.FreelancerEmail}</Text>
+      <Text>Recruiter's Email: {item.RecruiterEmail}</Text>
       <Text>Price: {item.price}</Text>
       <Text>Status: {item.status}</Text>
       <Picker
@@ -157,10 +163,6 @@ export default function COrders() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Offers</Text>
-        <Image
-          source={{ uri: DEFAULT_PROFILE_IMAGE }}
-          style={styles.avatar}
-        />
       </View>
       <View style={styles.tabRow}>
         <TouchableOpacity
