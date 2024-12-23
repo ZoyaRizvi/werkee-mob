@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet, Dimensions, Alert, ScrollView, FlatList, TextInput, Modal } from 'react-native';
-import { Avatar, Button, Card, Title, Paragraph, Chip, IconButton } from 'react-native-paper';
-import { auth, db, storage } from "../../firebase/firebase"; // Ensure Firebase storage is configured
+import { Avatar, Button, Card, Title, Paragraph, IconButton } from 'react-native-paper';
+import { auth, db, storage } from "../../firebase/firebase";
 import { doc, getDoc, getDocs, collection, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Linking } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -26,11 +27,28 @@ const Profile = () => {
   const [profile, setProfile] = useState(defaultProfile);
   const [loading, setLoading] = useState(true);
   const [showFullInfo, setShowFullInfo] = useState(false);
-  const [projects, setProjects] = useState([]);
+  const [jobs, setJobs] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newProject, setNewProject] = useState({ title: '', tag: '', description: '', img: '' });
+  const [newJob, setNewJob] = useState({
+    img: '',
+    title: '',
+    description: '',
+    Requirements: '',
+    experienceLevel: '',
+    jobLocation: '',
+    employmentType: 'Full-time',
+    companyName: '',
+    companyLogo: '',
+    postedDate: ''
+  });
   const [image, setImage] = useState(null);
-  const [editingProjectId, setEditingProjectId] = useState(null);
+  const [companyLogo, setCompanyLogo] = useState(null);
+  const [editingJobId, setEditingJobId] = useState(null);
+  const [editedProfile, setEditedProfile] = useState(defaultProfile);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [jobToDelete, setJobToDelete] = useState(null);
+
 
   const toggleInfoDisplay = () => setShowFullInfo((prev) => !prev);
 
@@ -60,52 +78,128 @@ const Profile = () => {
     };
 
     fetchProfile();
-    fetchProjects();
+    fetchJobs();
   }, []);
 
-  const fetchProjects = async () => {
-    const user = auth.currentUser;
-    if (user) {
-      const querySnapshot = await getDocs(collection(db, "Candidate_Work", user.uid, "projects"));
-      const projectsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setProjects(projectsData);
+  const handleEditProfile = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const userId = user.uid;
+      const docRef = doc(db, 'users', userId);
+      await updateDoc(docRef, editedProfile);
+      setProfile(editedProfile);
+      setIsEditModalOpen(false);
+      Alert.alert("Success", "Profile updated successfully.");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      Alert.alert("Error", "Could not update profile.");
     }
   };
 
-  const handleAddOrUpdateProject = async () => {
+  const openEditModal = () => {
+    setEditedProfile(profile);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditJob = (job) => {
+    setNewJob(job);
+    setEditingJobId(job.id);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteJob = async (id) => {
     const user = auth.currentUser;
     if (user) {
-      let imageUrl = newProject.img || '';
+      Alert.alert(
+        "Delete Job",
+        "Are you sure you want to delete this job?",
+        [
+          {
+            text: "Cancel",
+            onPress: () => console.log("Cancel pressed"),
+            style: "cancel"
+          },
+          {
+            text: "Delete",
+            onPress: async () => {
+              const jobRef = doc(db, "Candidate_Jobs", user.uid, "jobs", id); 
+              await deleteDoc(jobRef);
+              fetchJobs(); 
+              Alert.alert("Success", "Job deleted successfully.");
+            }
+          }
+        ],
+        { cancelable: true }
+      );
+    }
+  };
+  
+
+  const openDeleteModal = (job) => {
+    setJobToDelete(job);
+    setIsDeleteModalOpen(true);
+  };
+
+  const fetchJobs = async () => {
+    const user = auth.currentUser;
+    if (user) {
+      const querySnapshot = await getDocs(collection(db, "Jobsposted", user.uid, "jobs"));
+      const jobsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setJobs(jobsData);
+    }
+  };
+
+  const handleModalOpen = () => {
+    setNewProject({ title: "", description: "", img: "" }); // Reset the project form
+    setIsModalOpen(true);
+  };
+
+  const handleAddOrUpdateJob = async () => {
+    const user = auth.currentUser;
+    if (user) {
+      let imageUrl = newJob.img || '';
       if (image) {
-        const storageRef = ref(storage, `mywork/${user.uid}/${image.name}`);
+        const storageRef = ref(storage, `jobs/${user.uid}/${image.name}`);
         await uploadBytes(storageRef, image);
         imageUrl = await getDownloadURL(storageRef);
       }
-      if (editingProjectId) {
-        const projectRef = doc(db, "Candidate_Work", user.uid, "projects", editingProjectId);
-        await updateDoc(projectRef, { ...newProject, img: imageUrl });
-      } else {
-        await addDoc(collection(db, "Candidate_Work", user.uid, "projects"), { ...newProject, img: imageUrl });
+
+      let companyLogoUrl = '';
+      if (companyLogo) {
+        const storageRef = ref(storage, `jobs/${user.uid}/${companyLogo.name}`);
+        await uploadBytes(storageRef, companyLogo);
+        companyLogoUrl = await getDownloadURL(storageRef);
       }
-      fetchProjects();
+
+      if (editingJobId) {
+        const jobRef = doc(db, "Jobsposted", user.uid, "jobs", editingJobId);
+        await updateDoc(jobRef, { ...newJob, img: imageUrl, companyLogo: companyLogoUrl });
+      } else {
+        await addDoc(collection(db, "Jobsposted", user.uid, "jobs"), { ...newJob, img: imageUrl, companyLogo: companyLogoUrl });
+      }
+      fetchJobs();
       setIsModalOpen(false);
       resetForm();
     }
   };
 
-  const handleDeleteProject = async (id) => {
-    const user = auth.currentUser;
-    if (user) {
-      const projectRef = doc(db, "Candidate_Work", user.uid, "projects", id);
-      await deleteDoc(projectRef);
-      fetchProjects();
-    }
-  };
-
   const resetForm = () => {
     setImage(null);
-    setNewProject({ title: '', tag: '', description: '', img: '' });
-    setEditingProjectId(null);
+    setCompanyLogo(null);
+    setNewJob({
+      img: '',
+      title: '',
+      description: '',
+      Requirements: '',
+      experienceLevel: '',
+      jobLocation: '',
+      employmentType: 'Full-time',
+      companyName: '',
+      companyLogo: '',
+      postedDate: ''
+    });
+    setEditingJobId(null);
   };
 
   if (loading) {
@@ -135,6 +229,12 @@ const Profile = () => {
               <Title style={styles.name}>{profile.displayName || 'Add Name'}</Title>
               <Text style={styles.role}>{profile.title || 'Add Title'}</Text>
             </View>
+            <IconButton
+              icon="pencil"
+              size={24}
+              onPress={openEditModal}
+              style={styles.editButton}
+            />
           </View>
 
           <Card.Content>
@@ -146,11 +246,6 @@ const Profile = () => {
                 </Text>
               )}
             </Paragraph>
-            <View style={styles.actionButtons}>
-              <Button mode="outlined" style={styles.button} onPress={() => { }}>
-                Message
-              </Button>
-            </View>
 
             <View style={styles.additionalInfo}>
               <Text style={styles.infoLabel}>Location:</Text>
@@ -158,49 +253,241 @@ const Profile = () => {
 
               <Text style={styles.infoLabel}>Social:</Text>
               <View style={styles.socialIcons}>
-                {profile.facebook && <IconButton icon="facebook" size={20} onPress={() => { }} />}
-                {profile.twitter && <IconButton icon="twitter" size={20} onPress={() => { }} />}
-                {profile.instagram && <IconButton icon="instagram" size={20} onPress={() => { }} />}
+                {profile.facebook && (
+                  <IconButton
+                    icon="facebook"
+                    size={20}
+                    onPress={() => Linking.openURL(profile.facebook)}
+                  />
+                )}
+                {profile.twitter && (
+                  <IconButton
+                    icon="twitter"
+                    size={20}
+                    onPress={() => Linking.openURL(profile.twitter)}
+                  />
+                )}
+                {profile.instagram && (
+                  <IconButton
+                    icon="instagram"
+                    size={20}
+                    onPress={() => Linking.openURL(profile.instagram)}
+                  />
+                )}
               </View>
             </View>
           </Card.Content>
         </Card>
 
-        <View style={styles.workSection}>
-          <Text style={styles.workTitle}>My Work</Text>
-          <Button mode="contained" onPress={() => setIsModalOpen(true)} style={styles.uploadButton}>Upload Your Work</Button>
+        <Modal visible={isEditModalOpen} onRequestClose={() => setIsEditModalOpen(false)}>
+          <View style={styles.modalContent}>
+            <TextInput
+              style={styles.input}
+              placeholder="Name"
+              value={editedProfile.displayName}
+              onChangeText={(text) => setEditedProfile({ ...editedProfile, displayName: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Title"
+              value={editedProfile.title}
+              onChangeText={(text) => setEditedProfile({ ...editedProfile, title: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Info"
+              value={editedProfile.info}
+              onChangeText={(text) => setEditedProfile({ ...editedProfile, info: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Location"
+              value={editedProfile.location}
+              onChangeText={(text) => setEditedProfile({ ...editedProfile, location: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Facebook"
+              value={editedProfile.facebook}
+              onChangeText={(text) => setEditedProfile({ ...editedProfile, facebook: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Twitter"
+              value={editedProfile.twitter}
+              onChangeText={(text) => setEditedProfile({ ...editedProfile, twitter: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Instagram"
+              value={editedProfile.instagram}
+              onChangeText={(text) => setEditedProfile({ ...editedProfile, instagram: text })}
+            />
+            <Button mode="contained" onPress={handleEditProfile}>
+              Save Changes
+            </Button>
+          </View>
+        </Modal>
 
-          <FlatList
-            data={projects}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.workCard}>
-                <Image source={{ uri: item.img || 'default-image-url' }} style={styles.workImage} />
-                <Text style={styles.workTitleText}>{item.title}</Text>
-                <Text style={styles.workDescription}>{item.description}</Text>
-                <View style={styles.buttonRow}>
-                  <Button mode="contained" onPress={() => { setNewProject(item); setEditingProjectId(item.id); setIsModalOpen(true); }}>
+        <View style={styles.jobsContainer}>
+          <Button mode="contained" onPress={() => setIsModalOpen(true)} style={styles.addJobButton}>
+            Add New Job
+          </Button>
+
+          {jobs.length === 0 ? (
+            <Text>No jobs posted yet.</Text>
+          ) : (
+            <FlatList
+              data={jobs}
+              renderItem={({ item }) => (
+                <Card key={item.id} style={styles.card}>
+                  <Card.Content style={styles.cardContent}>
+
+                    <Image source={{ uri: item.companyLogo }} style={styles.companyLogo} />
+
+                    <Title style={styles.jobTitle}>{item.title}</Title>
+
+                    <Paragraph style={styles.jobDescription}>{item.description}</Paragraph>
+
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoText}>Requirements: {item.Requirements}</Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoText}>Experience Level: {item.experienceLevel}</Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoText}>Location: {item.jobLocation}</Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoText}>Employment Type: {item.employmentType}</Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoText}>Company: {item.companyName}</Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoText}>Posted Date: {new Date(item.postedDate).toLocaleDateString()}</Text>
+                    </View>
+
+                    <Button
+                    mode="contained"
+                    onPress={() => { setNewJob(item); setEditingJobId(item.id); setIsModalOpen(true); }}
+                    style={styles.button}
+                  >
                     Edit
                   </Button>
-                  <Button mode="contained" onPress={() => handleDeleteProject(item.id)}>
+                  <Button
+                    mode="contained"
+                    onPress={() => handleDeleteJob(item.id)}
+                    style={styles.button}
+                  >
                     Delete
                   </Button>
-                </View>
-              </View>
-            )}
-          />
-
-          <Modal visible={isModalOpen} onRequestClose={() => setIsModalOpen(false)}>
-            <View style={styles.modalContent}>
-              <TextInput style={styles.input} placeholder="Title" value={newProject.title} onChangeText={(text) => setNewProject({ ...newProject, title: text })} />
-              <TextInput style={styles.input} placeholder="Tag" value={newProject.tag} onChangeText={(text) => setNewProject({ ...newProject, tag: text })} />
-              <TextInput style={styles.input} placeholder="Description" value={newProject.description} onChangeText={(text) => setNewProject({ ...newProject, description: text })} />
-              <Button mode="contained" onPress={handleAddOrUpdateProject}>
-                {editingProjectId ? 'Update Project' : 'Add Project'}
-              </Button>
-            </View>
-          </Modal>
+                  </Card.Content>
+                </Card>
+              )}
+              keyExtractor={(item) => item.id}
+            />
+          )}
         </View>
+
+        <Modal visible={isDeleteModalOpen} onRequestClose={() => setIsDeleteModalOpen(false)}>
+          <View style={styles.modalContent}>
+            <Text>Are you sure you want to delete this job?</Text>
+            <Button onPress={handleDeleteJob}>Yes, Delete</Button>
+            <Button onPress={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+          </View>
+        </Modal>
+
+        <Modal visible={isModalOpen} onRequestClose={() => setIsModalOpen(false)}>
+          <View style={styles.modalContent}>
+            <TextInput
+              style={styles.input}
+              placeholder="Job Title"
+              value={newJob.title}
+              onChangeText={(text) => setNewJob({ ...newJob, title: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Company Name"
+              value={newJob.companyName}
+              onChangeText={(text) => setNewJob({ ...newJob, companyName: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Description"
+              value={newJob.description}
+              onChangeText={(text) => setNewJob({ ...newJob, description: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Requirements"
+              value={newJob.Requirements}
+              onChangeText={(text) => setNewJob({ ...newJob, Requirements: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Experience Level"
+              value={newJob.experienceLevel}
+              onChangeText={(text) => setNewJob({ ...newJob, experienceLevel: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Job Location"
+              value={newJob.jobLocation}
+              onChangeText={(text) => setNewJob({ ...newJob, jobLocation: text })}
+            />
+            <Button onPress={handleAddOrUpdateJob}>Save Job</Button>
+            <Button onPress={() => setIsModalOpen(false)}>Cancel</Button>
+          </View>
+        </Modal>
+
+        <Modal visible={isModalOpen} onRequestClose={() => setIsModalOpen(false)}>
+          <View style={styles.modalContent}>
+            <TextInput
+              style={styles.input}
+              placeholder="Job Title"
+              value={newJob.title}
+              onChangeText={(text) => setNewJob({ ...newJob, title: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Company Name"
+              value={newJob.companyName}
+              onChangeText={(text) => setNewJob({ ...newJob, companyName: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Description"
+              value={newJob.description}
+              onChangeText={(text) => setNewJob({ ...newJob, description: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Requirements"
+              value={newJob.Requirements}
+              onChangeText={(text) => setNewJob({ ...newJob, Requirements: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Experience Level"
+              value={newJob.experienceLevel}
+              onChangeText={(text) => setNewJob({ ...newJob, experienceLevel: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Job Location"
+              value={newJob.jobLocation}
+              onChangeText={(text) => setNewJob({ ...newJob, jobLocation: text })}
+            />
+            <Button onPress={handleAddOrUpdateJob}>Save Job</Button>
+            <Button onPress={() => setIsModalOpen(false)}>Cancel</Button>
+          </View>
+        </Modal>
       </View>
     </ScrollView>
   );
@@ -211,35 +498,102 @@ const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center' },
   backgroundImage: { width, height: width * 0.5, position: 'absolute', top: 0, opacity: 0.8 },
   profileCard: { marginTop: width * 0.3, width: '90%', borderRadius: 8, padding: 16 },
-  profileHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  avatar: { backgroundColor: 'white' },
-  profileInfo: { marginLeft: 16 },
-  name: { fontSize: 24, fontWeight: 'bold' },
-  role: { fontSize: 16, color: 'gray' },
-  profileDescription: { marginVertical: 12, color: 'darkgray', lineHeight: 22 },
-  moreText: { color: 'blue', marginTop: 8 },
-  actionButtons: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 12 },
-  button: { flex: 1, marginHorizontal: 4 },
-  additionalInfo: { marginTop: 12 },
-  infoLabel: { fontWeight: '600', marginTop: 8 },
-  infoText: { color: 'gray', fontSize: 14 },
-  socialIcons: { flexDirection: 'row' },
-  skillsContainer: { flexDirection: 'row', flexWrap: 'wrap' },
-  skillChip: { marginRight: 6, marginTop: 4 },
-  noSkillsText: { color: 'gray' },
-  badgeText: { fontSize: 18 },
-  workSection: { width: '90%', marginTop: 16 },
-  workTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 12 },
-  uploadButton: { alignSelf: 'center', marginVertical: 12 },
-  workCard: { marginBottom: 12, padding: 10, borderColor: 'lightgray', borderWidth: 1, borderRadius: 8 },
-  workImage: { width: '100%', height: 120, borderRadius: 8, marginBottom: 8 },
-  workTitleText: { fontWeight: '600', fontSize: 16 },
-  workDescription: { color: 'gray', marginTop: 4 },
-  buttonRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
-  modalContent: { padding: 20, backgroundColor: 'white', margin: 20, borderRadius: 8 },
-  input: { marginBottom: 12, backgroundColor: 'white', borderColor: 'gray', borderWidth: 1, paddingHorizontal: 8, borderRadius: 4 },
+  profileHeader: { flexDirection: 'row', alignItems: 'center' },
+  avatar: { marginRight: 20 },
+  profileInfo: { flex: 1 },
+  name: { fontSize: 18, fontWeight: 'bold' },
+  role: { fontSize: 14, color: 'gray' },
+  editButton: { position: 'absolute', top: 10, right: 10 },
+  profileDescription: { fontSize: 14, color: 'gray' },
+  moreText: { color: 'blue', textDecorationLine: 'underline' },
+  additionalInfo: { marginVertical: 10 },
+  infoLabel: { fontWeight: 'bold' },
+  infoText: { color: 'gray' },
+  socialIcons: { flexDirection: 'row', marginVertical: 10 },
+  jobsContainer: { marginTop: 20 },
+  addJobButton: { marginBottom: 10 },
+  jobCard: { marginBottom: 10, padding: 15, backgroundColor: '#f9f9f9', borderRadius: 8, elevation: 3 },
+  modalContent: { padding: 20 },
+  input: { marginBottom: 10, borderBottomWidth: 1, padding: 5 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { fontSize: 18, color: 'gray' },
+  jobActions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 10 },
+  jobActionButton: {
+    backgroundColor: '#007bff',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 5,
+    marginLeft: 10,
+    elevation: 3,
+  },
+  deleteButton: {
+    backgroundColor: '#dc3545',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 5,
+    marginLeft: 10,
+    elevation: 3,
+  },
+  jobHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  jobTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  editButtonIcon: {
+    fontSize: 20,
+    color: '#007bff',
+    marginLeft: 10,
+    padding: 5,
+  },
+  actionButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  scrollContainer: { padding: 10 },
+  container: { flex: 1 },
+  backgroundImage: { width: width, height: 200, marginBottom: 20 },
+  profileCard: { marginBottom: 20 },
+  profileHeader: { flexDirection: 'row', alignItems: 'center' },
+  avatar: { marginRight: 20 },
+  profileInfo: { flex: 1 },
+  name: { fontSize: 18, fontWeight: 'bold' },
+  role: { fontSize: 14, color: 'gray' },
+  editButton: { position: 'absolute', top: 10, right: 10 },
+  profileDescription: { fontSize: 14, color: 'gray' },
+  moreText: { color: 'blue', textDecorationLine: 'underline' },
+  additionalInfo: { marginVertical: 10 },
+  infoLabel: { fontWeight: 'bold' },
+  infoText: { color: 'gray' },
+  socialIcons: { flexDirection: 'row', marginVertical: 10 },
+  jobsContainer: { marginTop: 20 },
+  addJobButton: { marginBottom: 10 },
+  jobCard: { marginBottom: 10 },
+  modalContent: { padding: 20 },
+  input: { marginBottom: 10, borderBottomWidth: 1, padding: 5 },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  button: {
+    flex: 1,
+    marginHorizontal: 4,
+    marginVertical: 0,
+  },
 });
+
 
 export default Profile;
