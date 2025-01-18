@@ -14,10 +14,18 @@ import {
 import { getAuth } from 'firebase/auth';
 import { db } from "../../firebase/firebase";
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { Bar, Pie } from "react-chartjs-2";
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from "chart.js";
+import ChartDataLabels from "chartjs-plugin-datalabels";
+
+ChartJS.register(CategoryScale, LinearScale, BarElement,ChartDataLabels, Title, Tooltip, Legend, ArcElement);
+
 
 export function Home() {
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [openAddUserDialog, setOpenAddUserDialog] = useState(false);
   const [usersData, setUsersData] = useState([]);
+  const [userToDelete, setUserToDelete] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const auth = getAuth();
@@ -39,22 +47,53 @@ export function Home() {
   }, []);
 
   const handleOpenConfirmDialog = (userId) => {
+    setUserToDelete(userId);
     setOpenConfirmDialog(true);
   };
 
   const handleCloseConfirmDialog = () => {
     setOpenConfirmDialog(false);
+    setUserToDelete(null);
   };
 
-  const handleConfirmDelete = async (userId) => {
-    try {
-      await deleteDoc(doc(db, "users", userId));
-      setUsersData(usersData.filter(user => user.id !== userId));
-      handleCloseConfirmDialog();
-    } catch (error) {
-      console.error("Error deleting user: ", error);
+  const handleConfirmDelete = async () => {
+    if (userToDelete) {
+      try {
+        await deleteDoc(doc(db, "users", userToDelete));
+        setUsersData(usersData.filter((user) => user.id !== userToDelete));
+        handleCloseConfirmDialog();
+      } catch (error) {
+        console.error("Error deleting user: ", error);
+      }
     }
   };
+
+  const handleOpenAddUserDialog = () => {
+    setOpenAddUserDialog(true);
+  };
+
+  const handleCloseAddUserDialog = () => {
+    setOpenAddUserDialog(false);
+  };
+
+  const handleAddUser = async () => {
+    try {
+      await addDoc(collection(db, "users"), {
+        ...newUser,
+        img: "",
+        createdAt: serverTimestamp(),
+      });
+      const querySnapshot = await getDocs(collection(db, "users"));
+      const users = querySnapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((user) => user.id !== auth.currentUser.uid); // Exclude the logged-in user
+      setUsersData(users);
+      handleCloseAddUserDialog();
+    } catch (error) {
+      console.error("Error adding user: ", error);
+    }
+  };
+
 
   return (
     <SafeAreaView style={styles.container}>

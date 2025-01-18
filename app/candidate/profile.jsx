@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   scrollContainer: { paddingBottom: 50 },
   container: { flex: 1, alignItems: 'center' },
   backgroundImage: { width, height: width * 0.5, position: 'absolute', top: 0, opacity: 0.8 },
-  profileCard: { marginTop: width * 0.3, width: '90%', borderRadius: 8, padding: 16 },
+  profileCard: { marginTop: width * 0.3, width: '90%', borderRadius: 8, padding: 16 , backgroundColor: '#D3D3D3' },
   profileHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   avatar: { backgroundColor: 'white' },
   profileInfo: { marginLeft: 16 },

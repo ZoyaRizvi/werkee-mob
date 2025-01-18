@@ -45,7 +45,7 @@ export function Freelancers() {
     if (userToDelete) {
       try {
         await deleteDoc(doc(db, "users", userToDelete));
-        setUsersData(usersData.filter(user => user.id !== userToDelete));
+        setUsersData(usersData.filter((user) => user.id !== userToDelete));
         handleCloseConfirmDialog();
       } catch (error) {
         console.error("Error deleting user: ", error);
@@ -59,25 +59,26 @@ export function Freelancers() {
 
   const handleCloseAddUserDialog = () => {
     setOpenAddUserDialog(false);
-    setNewUser({ displayName: '', email: '', role: '' });
   };
 
   const handleAddUser = async () => {
     try {
       await addDoc(collection(db, "users"), {
         ...newUser,
-        img: '',
+        img: "",
         createdAt: serverTimestamp(),
       });
       const querySnapshot = await getDocs(collection(db, "users"));
-      const users = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(user => user.id !== currentUserId);
+      const users = querySnapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((user) => user.id !== auth.currentUser.uid); // Exclude the logged-in user
       setUsersData(users);
       handleCloseAddUserDialog();
     } catch (error) {
       console.error("Error adding user: ", error);
     }
   };
+
 
   const renderItem = ({ item }) => (
     <View style={styles.userRow}>
@@ -87,7 +88,7 @@ export function Freelancers() {
         <Text>{item.role}</Text>
       </View>
       <TouchableOpacity onPress={() => handleOpenConfirmDialog(item.id)} style={styles.deleteButton}>
-        <Ionicons name="trash-outline" size={20} color="red" />
+        <Ionicons name="trash-outline" size={20} color="white" />
       </TouchableOpacity>
     </View>
   );
@@ -166,83 +167,126 @@ export function Freelancers() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F4F5F7',
     padding: 16,
-    backgroundColor: '#fff',
   },
   header: {
+    fontSize:36,
+    backgroundColor: '#4A90E2',
+    paddingVertical: 20,
+    alignItems: 'center',
+    borderRadius: 10,
+    marginBottom: 16,
+  },
+  headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
+    color: '#fff',
   },
-  userList: {
-    marginTop: 16,
+  usersContainer: {
+    flex: 1,
+    justifyContent: 'center', // Centering the users container
+    alignItems: 'center',
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    width: '100%', // To allow scrolling
+    maxWidth: 600, // Limit max width for larger screens
+    padding: 16,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  scrollView: {
+    marginBottom: 16,
   },
   userRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 12,
+    alignItems: 'center',
+    marginBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: '#E2E8F0',
+    paddingBottom: 8,
   },
-  userInfo: {
+  userDetails: {
     flex: 1,
   },
-  userName: {
-    fontWeight: 'bold',
+  userText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  userRole: {
+    fontSize: 12,
+    color: '#6C757D',
+    marginTop: 4,
   },
   deleteButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 8,
-  },
-  addUserButton: {
-    marginTop: 16,
-    backgroundColor: '#007bff',
-    padding: 12,
-    alignItems: 'center',
+    backgroundColor: '#FF4D4D',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: 8,
+    alignItems: 'center',
   },
-  addUserButtonText: {
+  deleteButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
   },
-  modalOverlay: {
+  modalContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContainer: {
-    backgroundColor: '#fff',
     padding: 20,
-    borderRadius: 8,
-    width: '80%',
   },
-  input: {
-    height: 40,
-    borderColor: '#ddd',
-    borderWidth: 1,
-    marginBottom: 12,
-    paddingLeft: 8,
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#555',
+    marginBottom: 16,
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    width: '100%',
   },
   cancelButton: {
-    padding: 8,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 4,
+    backgroundColor: '#D1D5DB',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    width: '48%',
+    alignItems: 'center',
   },
-  addButton: {
-    padding: 8,
-    backgroundColor: '#007bff',
-    borderRadius: 4,
+  cancelButtonText: {
+    color: '#333',
+    fontSize: 16,
   },
-  deleteButton: {
-    padding: 8,
-    backgroundColor: 'red',
-    borderRadius: 4,
+  confirmButton: {
+    backgroundColor: '#4A90E2',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    width: '48%',
+    alignItems: 'center',
+  },
+  confirmButtonText: {
+    color: '#fff',
+    fontSize: 16,
   },
 });
-
 export default Freelancers;
