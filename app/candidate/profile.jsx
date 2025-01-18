@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, StyleSheet, Dimensions, Alert, ScrollView, FlatList, TextInput, Modal } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions, Alert, ScrollView, FlatList, TextInput, Modal, Linking } from 'react-native';
 import { Avatar, Button, Card, Title, Paragraph, Chip, IconButton } from 'react-native-paper';
-import { auth, db, storage } from "../../firebase/firebase"; // Ensure Firebase storage is configured
+import { auth, db, storage } from "../../firebase/firebase";
 import { doc, getDoc, getDocs, collection, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
@@ -31,6 +31,8 @@ const Profile = () => {
   const [newProject, setNewProject] = useState({ title: '', tag: '', description: '', img: '' });
   const [image, setImage] = useState(null);
   const [editingProjectId, setEditingProjectId] = useState(null);
+  const [editedProfile, setEditedProfile] = useState(defaultProfile);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const toggleInfoDisplay = () => setShowFullInfo((prev) => !prev);
 
@@ -63,13 +65,51 @@ const Profile = () => {
     fetchProjects();
   }, []);
 
-  const fetchProjects = async () => {
-    const user = auth.currentUser;
-    if (user) {
-      const querySnapshot = await getDocs(collection(db, "Candidate_Work", user.uid, "projects"));
-      const projectsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setProjects(projectsData);
+  const handleEditProfile = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const userId = user.uid;
+      const docRef = doc(db, 'users', userId);
+      await updateDoc(docRef, editedProfile);
+      setProfile(editedProfile);
+      setIsEditModalOpen(false);
+      Alert.alert("Success", "Profile updated successfully.");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      Alert.alert("Error", "Could not update profile.");
     }
+  };
+
+  const openEditModal = () => {
+    setEditedProfile(profile);
+    setIsEditModalOpen(true);
+  };
+
+  const handleAddNewProject = async () => {
+    const user = auth.currentUser;
+    if (user && newProject.title && newProject.description) {
+      try {
+        const docRef = await addDoc(collection(db, "Candidate_Work", user.uid, "projects"), {
+          ...newProject,
+          userId: user.uid,
+          createdAt: new Date(),
+        });
+        console.log("Project added with ID: ", docRef.id);
+        fetchProjects();
+        setNewProject({ title: "", description: "", img: "" }); // Reset the form
+        setIsModalOpen(false);
+      } catch (error) {
+        console.error("Error adding project: ", error);
+      }
+    } else {
+      Alert.alert("Error", "Please fill in all required fields");
+    }
+  };
+
+  const handleModalOpen = () => {
+    setNewProject({ title: "", description: "", img: "" }); // Reset the project form
+    setIsModalOpen(true);
   };
 
   const handleAddOrUpdateProject = async () => {
@@ -81,24 +121,70 @@ const Profile = () => {
         await uploadBytes(storageRef, image);
         imageUrl = await getDownloadURL(storageRef);
       }
+      const userProfileRef = doc(db, 'users', user.uid);
+      const userProfileDoc = await getDoc(userProfileRef);
+
+      if (!userProfileDoc.exists()) {
+        Alert.alert("Error", "User profile not found.");
+        return;
+      }
+
+      const userProfile = userProfileDoc.data();
+      const workData = {
+        ...newProject,
+        img: imageUrl,
+        profile_pic: userProfile.img || '',
+        uid: user.uid,
+        user_name: userProfile.displayName || 'Unknown User',
+      };
+
       if (editingProjectId) {
         const projectRef = doc(db, "Candidate_Work", user.uid, "projects", editingProjectId);
-        await updateDoc(projectRef, { ...newProject, img: imageUrl });
+        await updateDoc(projectRef, workData);
       } else {
-        await addDoc(collection(db, "Candidate_Work", user.uid, "projects"), { ...newProject, img: imageUrl });
+        await addDoc(collection(db, "Candidate_Work", user.uid, "projects"), workData);
       }
+
       fetchProjects();
       setIsModalOpen(false);
       resetForm();
     }
   };
 
+
+  const fetchProjects = async () => {
+    const user = auth.currentUser;
+    if (user) {
+      const querySnapshot = await getDocs(collection(db, "Candidate_Work", user.uid, "projects"));
+      const projectsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setProjects(projectsData);
+    }
+  };
+
   const handleDeleteProject = async (id) => {
     const user = auth.currentUser;
     if (user) {
-      const projectRef = doc(db, "Candidate_Work", user.uid, "projects", id);
-      await deleteDoc(projectRef);
-      fetchProjects();
+      Alert.alert(
+        "Delete Project",
+        "Are you sure you want to delete this project?",
+        [
+          {
+            text: "Cancel",
+            onPress: () => console.log("Cancel pressed"),
+            style: "cancel"
+          },
+          {
+            text: "Delete",
+            onPress: async () => {
+              const projectRef = doc(db, "Candidate_Work", user.uid, "projects", id);
+              await deleteDoc(projectRef);
+              fetchProjects();
+              Alert.alert("Success", "Project deleted successfully.");
+            }
+          }
+        ],
+        { cancelable: true }
+      );
     }
   };
 
@@ -135,6 +221,12 @@ const Profile = () => {
               <Title style={styles.name}>{profile.displayName || 'Add Name'}</Title>
               <Text style={styles.role}>{profile.title || 'Add Title'}</Text>
             </View>
+            <IconButton
+              icon="pencil"
+              size={24}
+              onPress={openEditModal}
+              style={styles.editButton}
+            />
           </View>
 
           <Card.Content>
@@ -153,9 +245,27 @@ const Profile = () => {
 
               <Text style={styles.infoLabel}>Social:</Text>
               <View style={styles.socialIcons}>
-                {profile.facebook && <IconButton icon="facebook" size={20} onPress={() => { }} />}
-                {profile.twitter && <IconButton icon="twitter" size={20} onPress={() => { }} />}
-                {profile.instagram && <IconButton icon="instagram" size={20} onPress={() => { }} />}
+                {profile.facebook && (
+                  <IconButton
+                    icon="facebook"
+                    size={20}
+                    onPress={() => Linking.openURL(profile.facebook)}
+                  />
+                )}
+                {profile.twitter && (
+                  <IconButton
+                    icon="twitter"
+                    size={20}
+                    onPress={() => Linking.openURL(profile.twitter)}
+                  />
+                )}
+                {profile.instagram && (
+                  <IconButton
+                    icon="instagram"
+                    size={20}
+                    onPress={() => Linking.openURL(profile.instagram)}
+                  />
+                )}
               </View>
 
               <Text style={styles.infoLabel}>Skills:</Text>
@@ -175,9 +285,116 @@ const Profile = () => {
           </Card.Content>
         </Card>
 
+        <Modal visible={isModalOpen} onRequestClose={() => setIsModalOpen(false)}>
+          <View style={styles.modalContent}>
+            <TextInput
+              style={styles.input}
+              placeholder="Title"
+              value={newProject.title}
+              onChangeText={(text) => setNewProject({ ...newProject, title: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Tag (e.g., #Cards #Illustrator)"
+              value={newProject.tag}
+              onChangeText={(text) => setNewProject({ ...newProject, tag: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Description"
+              value={newProject.description}
+              onChangeText={(text) => setNewProject({ ...newProject, description: text })}
+            />
+            <Button mode="contained" onPress={handleAddOrUpdateProject}>
+              Save Work
+            </Button>
+          </View>
+        </Modal>
+
+
+        <Modal visible={isEditModalOpen} onRequestClose={() => setIsEditModalOpen(false)}>
+          <View style={styles.modalContent}>
+            <TextInput
+              style={styles.input}
+              placeholder="Name"
+              value={editedProfile.displayName}
+              onChangeText={(text) => setEditedProfile({ ...editedProfile, displayName: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Title"
+              value={editedProfile.title}
+              onChangeText={(text) => setEditedProfile({ ...editedProfile, title: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Info"
+              value={editedProfile.info}
+              onChangeText={(text) => setEditedProfile({ ...editedProfile, info: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Location"
+              value={editedProfile.location}
+              onChangeText={(text) => setEditedProfile({ ...editedProfile, location: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Facebook"
+              value={editedProfile.facebook}
+              onChangeText={(text) => setEditedProfile({ ...editedProfile, facebook: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Twitter"
+              value={editedProfile.twitter}
+              onChangeText={(text) => setEditedProfile({ ...editedProfile, twitter: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Instagram"
+              value={editedProfile.instagram}
+              onChangeText={(text) => setEditedProfile({ ...editedProfile, instagram: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Skills"
+              value={editedProfile.skills}
+              onChangeText={(text) => setEditedProfile({ ...editedProfile, skills: text })}
+            />
+            <Button mode="contained" onPress={handleEditProfile}>
+              Save Changes
+            </Button>
+          </View>
+        </Modal>
+
         <View style={styles.workSection}>
           <Text style={styles.workTitle}>My Work</Text>
-          <Button mode="contained" onPress={() => setIsModalOpen(true)} style={styles.uploadButton}>Upload Your Work</Button>
+          <Button
+            mode="contained"
+            onPress={handleModalOpen} 
+            style={styles.button}
+          >
+            Upload Your Work
+          </Button>
+
+          <Modal visible={isModalOpen} onDismiss={() => setIsModalOpen(false)}>
+            <View style={styles.modalContent}>
+              <TextInput
+                label="Title"
+                value={newProject.title}
+                onChangeText={(text) => setNewProject({ ...newProject, title: text })}
+              />
+              <TextInput
+                label="Description"
+                value={newProject.description}
+                onChangeText={(text) => setNewProject({ ...newProject, description: text })}
+              />
+              <Button mode="contained" onPress={handleAddNewProject}>
+                Add Project
+              </Button>
+            </View>
+          </Modal>
 
           <FlatList
             data={projects}
@@ -188,10 +405,18 @@ const Profile = () => {
                 <Text style={styles.workTitleText}>{item.title}</Text>
                 <Text style={styles.workDescription}>{item.description}</Text>
                 <View style={styles.buttonRow}>
-                  <Button mode="contained" onPress={() => { setNewProject(item); setEditingProjectId(item.id); setIsModalOpen(true); }}>
+                  <Button
+                    mode="contained"
+                    onPress={() => { setNewProject(item); setEditingProjectId(item.id); setIsModalOpen(true); }}
+                    style={styles.button}
+                  >
                     Edit
                   </Button>
-                  <Button mode="contained" onPress={() => handleDeleteProject(item.id)}>
+                  <Button
+                    mode="contained"
+                    onPress={() => handleDeleteProject(item.id)}
+                    style={styles.button}
+                  >
                     Delete
                   </Button>
                 </View>
@@ -249,6 +474,18 @@ const styles = StyleSheet.create({
   input: { marginBottom: 12, backgroundColor: 'white', borderColor: 'gray', borderWidth: 1, paddingHorizontal: 8, borderRadius: 4 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { fontSize: 18, color: 'gray' },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  button: {
+    flex: 1,
+    marginHorizontal: 4,
+    marginVertical: 0,
+  },
+
 });
 
 export default Profile;

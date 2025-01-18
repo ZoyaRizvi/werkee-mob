@@ -7,6 +7,7 @@ import Councellor from "../screens/councellor";
 import SkillAssessmentScreen from "../screens/SkillAssessmentScreen3";
 import orders from "../screens/orders";
 import logo from "../../assets/images/werkee.jpg"
+import { LogOut } from '../(auth)/logout'; 
 
 const Drawer = createDrawerNavigator();
 
@@ -144,6 +145,7 @@ const DrawerLayout = () => {
       <Drawer.Screen name="Councellor" component={Councellor} options={{ title: "Councellor" }} />
       <Drawer.Screen name="SkillAssessment" component={SkillAssessmentScreen} options={{ title: "SkillAssessment" }} />
       <Drawer.Screen name="orders" component={orders} options={{ title: "Orders" }} />
+      <Drawer.Screen name="LogOut" component={LogOut} options={{ title: "Log Out" }} />
     </Drawer.Navigator>
   );
 };

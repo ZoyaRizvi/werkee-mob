@@ -1,27 +1,27 @@
 import { Image, Text, View } from "react-native";
 import { Tabs } from "expo-router";
-import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawer"; // Import Drawer components
-import { LinearGradient } from 'expo-linear-gradient'; // For gradient background
+import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawer"; 
+import { LinearGradient } from 'expo-linear-gradient'; 
 import { icons } from "../../constants";
 import ROrders from "../screens/Rorders";
 import logo from "../../assets/images/werkee.jpg"
 import Profile from "./profile";
+import { LogOut } from '../(auth)/logout'; 
+import Councellor from "../screens/councellor";
 
-// Drawer Navigator
+
 const Drawer = createDrawerNavigator();
 
-// Custom Drawer Content (for custom styling)
 const CustomDrawerContent = (props) => {
   return (
     <LinearGradient
-    colors={['#0a9ea6', '#4DB6AC']} // Gradient background
+    colors={['#0a9ea6', '#4DB6AC']}
       style={{ flex: 1 }}
     >
       <DrawerContentScrollView {...props}>
-        {/* Header Section (Optional Profile Picture, etc.) */}
         <View style={{ padding: 20, alignItems: 'center', justifyContent: 'center' }}>
           <Image
-            source={logo} // Add your logo or profile image
+            source={logo} 
             style={{ width: 80, height: 80, borderRadius: 40, marginBottom: 10 }}
           />
           <Text style={{ color: '#FFF', fontSize: 16, fontWeight: 'bold' }}>
@@ -35,7 +35,6 @@ const CustomDrawerContent = (props) => {
   );
 };
 
-// Tab Icon Component
 const TabIcon = ({ icon, color, name, focused }) => {
   return (
     <View className="flex items-center justify-center gap-2">
@@ -55,7 +54,6 @@ const TabIcon = ({ icon, color, name, focused }) => {
   );
 };
 
-// Tabs Component
 const TabsLayout = () => {
   return (
     <Tabs
@@ -120,18 +118,17 @@ const TabsLayout = () => {
   );
 };
 
-// Drawer Layout with custom styles
 const DrawerLayout = () => {
   return (
     <Drawer.Navigator
-      drawerContent={(props) => <CustomDrawerContent {...props} />} // Use custom drawer content
+      drawerContent={(props) => <CustomDrawerContent {...props} />} 
       screenOptions={{
         drawerStyle: {
-          backgroundColor: "transparent", // Let the gradient show
+          backgroundColor: "transparent", 
           width: 240,
         },
-        drawerActiveTintColor: "#FFF", // Text color for active item
-        drawerInactiveTintColor: "#E0E0E0", // Text color for inactive items
+        drawerActiveTintColor: "#FFF", 
+        drawerInactiveTintColor: "#E0E0E0",
         drawerLabelStyle: {
           fontSize: 16,
           fontWeight: "bold",
@@ -140,13 +137,14 @@ const DrawerLayout = () => {
           marginVertical: 5,
           paddingHorizontal: 10,
         },
-        drawerActiveBackgroundColor: "#6200EA", // Background color for active item
-        drawerInactiveBackgroundColor: "transparent", // Transparent for inactive items
+        drawerActiveBackgroundColor: "#6200EA", 
+        drawerInactiveBackgroundColor: "transparent", 
       }}
     >
-      {/* Drawer Screens */}
       <Drawer.Screen name="Tabs" component={TabsLayout} options={{ title: "Home" }} />
       <Drawer.Screen name="Profile" component={Profile} options={{ title: "Profile" }} />
+      <Drawer.Screen name="Councellor" component={Councellor} options={{ title: "Councellor" }} />
+      <Drawer.Screen name="LogOut" component={LogOut} options={{ title: "Log Out" }} />
       <Drawer.Screen name="orders" component={ROrders} options={{ title: "Orders" }} />
     </Drawer.Navigator>
   );
